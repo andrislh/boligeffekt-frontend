@@ -445,7 +445,8 @@ export default function App() {
   useEffect(() => {
     const params    = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
-    if (!sessionId) return;
+    if (!sessionId) { console.log("Ingen session_id i URL"); return; }
+console.log("Session ID funnet:", sessionId);
 
     const lagret = hentData();
     if (!lagret) return;
