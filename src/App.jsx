@@ -455,7 +455,6 @@ export default function App() {
     setEpost(lagret.epost || "");
     setBetalt(true);
     setSkjerm("resultat");
-    window.history.replaceState({}, "", "/");
 
     // Send PDF-rapport automatisk
     fetch(`${BACKEND}/api/send-rapport`, {
@@ -463,6 +462,7 @@ export default function App() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ session_id: sessionId, resultatData: lagret, epost: lagret.epost }),
     }).then(() => setPdfSendt(true)).catch(console.error);
+      window.history.replaceState({}, "", "/");
   }, []);
 
   function lagOgVis(inp) {
