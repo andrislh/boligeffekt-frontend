@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
-const PRIS = 199;
+const PAKKER = {
+  energirapport:     { navn: "Energirapport",     pris: 199, beløp: 19900 },
+  oppgraderingsplan: { navn: "Oppgraderingsplan", pris: 399, beløp: 39900 },
+};
 
 // ─────────────────────────────────────────────
 // BEREGNINGSDATA
@@ -169,31 +172,52 @@ function Skala({ merke }) {
 // ─────────────────────────────────────────────
 function Betalingsmur({ resultat, input, onBetalt }) {
   const [epost, setEpost]   = useState("");
+  const [pakke, setPakke]   = useState("oppgraderingsplan");
   const [laster, setLaster] = useState(false);
   const [feil, setFeil]     = useState("");
   const { merke, kwhPerM2, tiltak } = resultat;
   const høy = tiltak.filter(t => t.prioritet === "høy");
-  const totalStøtte = tiltak.reduce((s,t) => s + t.støtte_snitt, 0);
 
   async function betal() {
     if (!epost.includes("@")) { setFeil("Skriv inn en gyldig e-postadresse"); return; }
     setFeil(""); setLaster(true);
     const resultatId = lagId(input);
-    lagreData({ resultat, input, epost });
+    lagreData({ resultat, input, epost, pakke });
     try {
       const res  = await fetch(`${BACKEND}/api/create-checkout`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resultatId, email: epost, resultatData: { resultat, input } }),
+        body: JSON.stringify({ resultatId, email: epost, resultatData: { resultat, input }, pakke }),
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
       else { setFeil("Noe gikk galt – prøv igjen."); setLaster(false); }
     } catch(_) {
-      // Demo-modus (ingen backend tilkoblet)
-      onBetalt(epost);
+      onBetalt(epost, pakke);
       setLaster(false);
     }
   }
+
+  const kortstil = valgt => ({
+    ...S.card, border:`2px solid ${valgt ? C.navy : C.border}`,
+    cursor:"pointer", position:"relative", marginBottom:0,
+    transition:"all .15s",
+    boxShadow: valgt ? `0 8px 32px rgba(27,58,92,0.18)` : "0 2px 12px rgba(27,58,92,0.06)",
+  });
+
+  const BASIS = [
+    "Energimerke A–G med skala",
+    "Full tiltaksplan med tilbakebetalingstid",
+    "Enova-støtteoversikt",
+    "EPBD 2024-status",
+    "PDF-rapport på e-post",
+  ];
+  const EKSTRA = [
+    "Detaljert økonomianalyse",
+    "Handlingsplan – beste investering fremhevet",
+    "Enova-søknadspakke med dokumentasjonsliste",
+    "Ferdig søknadstekst for Enova",
+    "Finansieringstips: grønne boliglån",
+  ];
 
   return (
     <div style={S.app}>
@@ -205,7 +229,7 @@ function Betalingsmur({ resultat, input, onBetalt }) {
             <Merke m={merke} stor/>
             <div>
               <div style={S.tag}>Estimert energimerke</div>
-              <div style={{fontFamily:"Georgia,serif",fontWeight:800,fontSize:"1.6rem",color:C.navyDark}}>Merke {merke.merke}</div>
+              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:800,fontSize:"1.6rem",color:C.navyDark}}>Merke {merke.merke}</div>
               <div style={{fontSize:"0.82rem",color:C.muted}}>{kwhPerM2} kWh/m²/år · {merke.epbd}</div>
             </div>
           </div>
@@ -222,34 +246,48 @@ function Betalingsmur({ resultat, input, onBetalt }) {
             <div style={{background:C.white,borderRadius:16,padding:"20px 24px",boxShadow:"0 8px 32px rgba(0,0,0,0.15)",textAlign:"center",border:`2px solid ${C.green}40`}}>
               <div style={{fontSize:"1.6rem",marginBottom:6}}>🔒</div>
               <div style={{fontWeight:800,color:C.navyDark,fontSize:"0.95rem"}}>{høy.length} tiltak identifisert</div>
-              <div style={{fontSize:"0.78rem",color:C.muted,marginTop:3}}>Lås opp for å se hele planen</div>
+              <div style={{fontSize:"0.78rem",color:C.muted,marginTop:3}}>Velg en pakke for å låse opp</div>
             </div>
           </div>
         </div>
 
-        {/* Hva du får */}
-        <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,borderRadius:16,padding:"24px",marginBottom:16}}>
-          <div style={{color:C.white,fontWeight:800,fontSize:"1rem",marginBottom:16,letterSpacing:"-0.01em"}}>🎯 Dette får du i full rapport:</div>
-          <div style={{display:"grid",gap:10}}>
-            {[
-              { ikon:"📋", tittel:`${tiltak.length} konkrete tiltak`, tekst:`Rangert etter tilbakebetalingstid – du ser nøyaktig hvilke tiltak som lønner seg for din bolig` },
-              { ikon:"💰", tittel:`Enova-støtteoversikt – inntil ${totalStøtte.toLocaleString("no")} kr`, tekst:"Nøyaktig hvilke støtteordninger du kan søke, med beløp og lenker til Enova" },
-              { ikon:"📉", tittel:"Estimert årsbesparelse per tiltak", tekst:"Se hva hvert tiltak sparer deg i strømkostnader hvert år, beregnet på din bolig" },
-              { ikon:"🇪🇺", tittel:"EPBD 2024-status og EU-krav", tekst:"Sjekk om boligen din oppfyller EU-direktivets krav for 2030 og 2033 – viktig ved salg" },
-              { ikon:"🔧", tittel:"Tekniske beregningsdata", tekst:"Full transparens: U-verdier, graddagstall, COP-faktor og primærenergi etter NS-EN ISO 52000" },
-              { ikon:"📄", tittel:"PDF-rapport sendt til e-post", tekst:"Ferdig formatert rapport du kan dele med håndverkere, bank eller eiendomsmegler" },
-            ].map(x=>(
-              <div key={x.tittel} style={{display:"flex",gap:12,alignItems:"flex-start",background:"rgba(255,255,255,0.07)",borderRadius:10,padding:"12px 14px"}}>
-                <span style={{fontSize:"1.2rem",flexShrink:0,marginTop:1}}>{x.ikon}</span>
-                <div>
-                  <div style={{color:C.white,fontWeight:700,fontSize:"0.84rem",marginBottom:2}}>{x.tittel}</div>
-                  <div style={{color:"rgba(255,255,255,0.60)",fontSize:"0.76rem",lineHeight:1.5}}>{x.tekst}</div>
+        {/* Velg pakke */}
+        <div style={{marginBottom:4}}>
+          <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,textAlign:"center",marginBottom:4}}>Velg din pakke</div>
+          <div style={{fontSize:"0.82rem",color:C.muted,textAlign:"center",marginBottom:14}}>Klikk for å velge, deretter betal</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+
+            {/* Pakke 1 – Energirapport */}
+            <div style={kortstil(pakke==="energirapport")} onClick={()=>setPakke("energirapport")}>
+              <div style={{fontWeight:800,fontSize:"0.88rem",color:C.navyDark,marginBottom:2}}>Energirapport</div>
+              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:900,fontSize:"1.5rem",color:C.navyDark,marginBottom:10}}>199 kr</div>
+              {BASIS.map(x=>(
+                <div key={x} style={{display:"flex",gap:6,alignItems:"flex-start",marginBottom:5}}>
+                  <span style={{color:C.green,fontWeight:800,fontSize:"0.75rem",flexShrink:0,marginTop:"1px"}}>✓</span>
+                  <span style={{fontSize:"0.73rem",color:C.muted,lineHeight:1.4}}>{x}</span>
                 </div>
+              ))}
+              <div style={{marginTop:12,padding:"9px",background:pakke==="energirapport"?`linear-gradient(135deg,${C.navy},${C.navyMid})`:"#f0ede8",borderRadius:8,textAlign:"center",color:pakke==="energirapport"?C.white:C.muted,fontWeight:700,fontSize:"0.75rem"}}>
+                {pakke==="energirapport" ? "✓ Valgt" : "Velg"}
               </div>
-            ))}
-          </div>
-          <div style={{marginTop:14,borderTop:"1px solid rgba(255,255,255,0.12)",paddingTop:12,fontSize:"0.76rem",color:"rgba(255,255,255,0.5)"}}>
-            Engangskjøp · Ingen abonnement · Rapport tilgjengelig øyeblikkelig
+            </div>
+
+            {/* Pakke 2 – Oppgraderingsplan */}
+            <div style={kortstil(pakke==="oppgraderingsplan")} onClick={()=>setPakke("oppgraderingsplan")}>
+              <div style={{position:"absolute",top:-11,left:"50%",transform:"translateX(-50%)",background:`linear-gradient(135deg,${C.green},${C.greenLight})`,color:C.white,borderRadius:100,padding:"3px 11px",fontSize:"0.65rem",fontWeight:800,whiteSpace:"nowrap",letterSpacing:"0.05em"}}>MEST POPULÆR</div>
+              <div style={{fontWeight:800,fontSize:"0.88rem",color:C.navyDark,marginBottom:2,marginTop:6}}>Oppgraderingsplan</div>
+              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:900,fontSize:"1.5rem",color:C.navyDark,marginBottom:3}}>399 kr</div>
+              <div style={{fontSize:"0.67rem",color:C.green,fontWeight:700,marginBottom:7}}>Alt i Energirapport, pluss:</div>
+              {EKSTRA.map(x=>(
+                <div key={x} style={{display:"flex",gap:6,alignItems:"flex-start",marginBottom:5}}>
+                  <span style={{color:C.green,fontWeight:800,fontSize:"0.75rem",flexShrink:0,marginTop:"1px"}}>✓</span>
+                  <span style={{fontSize:"0.73rem",color:C.muted,lineHeight:1.4}}>{x}</span>
+                </div>
+              ))}
+              <div style={{marginTop:12,padding:"9px",background:pakke==="oppgraderingsplan"?`linear-gradient(135deg,${C.green},${C.greenLight})`:"#f0ede8",borderRadius:8,textAlign:"center",color:pakke==="oppgraderingsplan"?C.white:C.muted,fontWeight:700,fontSize:"0.75rem"}}>
+                {pakke==="oppgraderingsplan" ? "✓ Valgt" : "Velg"}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -257,11 +295,11 @@ function Betalingsmur({ resultat, input, onBetalt }) {
         <div style={S.card}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
             <div>
-              <div style={{fontFamily:"Georgia,serif",fontWeight:800,fontSize:"1.1rem",color:C.navyDark}}>Full energirapport</div>
+              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:800,fontSize:"1.05rem",color:C.navyDark}}>{PAKKER[pakke].navn}</div>
               <div style={{fontSize:"0.82rem",color:C.muted}}>Engangskjøp · Ingen abonnement</div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontFamily:"Georgia,serif",fontWeight:900,fontSize:"1.8rem",color:C.navyDark}}>{PRIS} kr</div>
+              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:900,fontSize:"1.8rem",color:C.navyDark}}>{PAKKER[pakke].pris} kr</div>
               <div style={{fontSize:"0.72rem",color:C.muted}}>inkl. mva</div>
             </div>
           </div>
@@ -272,7 +310,7 @@ function Betalingsmur({ resultat, input, onBetalt }) {
             {feil && <div style={{color:"#e53e3e",fontSize:"0.8rem",marginTop:5}}>{feil}</div>}
           </div>
           <button style={{...S.btnP,background:`linear-gradient(135deg,${C.green},${C.greenLight})`,boxShadow:`0 6px 20px ${C.green}44`}} onClick={betal} disabled={laster}>
-            {laster ? "Sender til betaling…" : `Betal ${PRIS} kr og få full rapport →`}
+            {laster ? "Sender til betaling…" : `Velg ${PAKKER[pakke].navn} – ${PAKKER[pakke].pris} kr →`}
           </button>
           <div style={{display:"flex",justifyContent:"center",gap:16,marginTop:14}}>
             {["💳 Kort","🔒 Stripe","📄 PDF på e-post"].map(x=><span key={x} style={{fontSize:"0.72rem",color:C.muted}}>{x}</span>)}
@@ -287,12 +325,24 @@ function Betalingsmur({ resultat, input, onBetalt }) {
 // ─────────────────────────────────────────────
 // FULL RAPPORT
 // ─────────────────────────────────────────────
-function FullRapport({ resultat, epost, pdfSendt, onNullstill }) {
-  const [visAlle, setVisAlle]     = useState(false);
-  const [fane, setFane]           = useState("tiltak");
-  const [leadNavn, setLeadNavn]   = useState("");
-  const [leadTlf, setLeadTlf]     = useState("");
-  const [leadSendt, setLeadSendt] = useState(false);
+const ENOVA_DOCS = {
+  tetting:          "Faktura fra godkjent fagperson, trykktest-rapport (blower door)",
+  isolering_loft:   "Faktura, dokumentasjon på isolasjonstykkelse før og etter",
+  isolering_vegger: "Faktura, dokumentasjon på isolasjonstykkelse før og etter",
+  varmepumpe_ll:    "Faktura fra godkjent installatør, teknisk spesifikasjon (COP-verdi)",
+  varmepumpe_lv:    "Faktura fra godkjent installatør, teknisk spesifikasjon (COP-verdi)",
+  vinduer:          "Faktura, U-verdi dokumentasjon for nye vinduer",
+  ventilasjon:      "Faktura fra godkjent installatør, SFP-verdi dokumentasjon",
+  solceller:        "Faktura, teknisk dokumentasjon, nettilknytningsavtale",
+};
+
+function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
+  const [visAlle, setVisAlle]       = useState(false);
+  const [fane, setFane]             = useState("tiltak");
+  const [kopiert, setKopiert]       = useState(false);
+  const [leadNavn, setLeadNavn]     = useState("");
+  const [leadTlf, setLeadTlf]       = useState("");
+  const [leadSendt, setLeadSendt]   = useState(false);
   const [leadLaster, setLeadLaster] = useState(false);
   const { kwhPerM2, primærPerM2, totalKwh, merke, merkePotensial, strømkostnad, tiltak } = resultat;
   const høy = tiltak.filter(t => t.prioritet === "høy");
@@ -308,11 +358,14 @@ function FullRapport({ resultat, epost, pdfSendt, onNullstill }) {
         {/* Suksessbanner */}
         <div style={{background:`${C.green}15`,border:`1px solid ${C.green}30`,borderRadius:14,padding:"14px 18px",marginBottom:16,display:"flex",alignItems:"center",gap:12}}>
           <span style={{fontSize:"1.4rem"}}>✅</span>
-          <div>
-            <div style={{fontWeight:700,color:C.navyDark,fontSize:"0.9rem"}}>Betaling mottatt – full rapport ulåst</div>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:700,color:C.navyDark,fontSize:"0.9rem"}}>Betaling mottatt – rapport ulåst</div>
             <div style={{fontSize:"0.78rem",color:C.muted}}>
               {pdfSendt ? `PDF-rapport sendt til ${epost}` : "PDF-rapport sendes til din e-post om et øyeblikk"}
             </div>
+          </div>
+          <div style={{background:pakke==="oppgraderingsplan"?`linear-gradient(135deg,${C.green},${C.greenLight})`:`linear-gradient(135deg,${C.navy},${C.navyMid})`,color:C.white,borderRadius:100,padding:"4px 12px",fontSize:"0.68rem",fontWeight:800,whiteSpace:"nowrap",flexShrink:0}}>
+            {pakke==="oppgraderingsplan" ? "Oppgraderingsplan" : "Energirapport"}
           </div>
         </div>
 
@@ -436,6 +489,151 @@ function FullRapport({ resultat, epost, pdfSendt, onNullstill }) {
             </div>
           </div>
         )}
+
+        {/* ── OPPGRADERINGSPLAN-seksjoner ── */}
+        {pakke === "oppgraderingsplan" && (() => {
+          const høyAlle  = tiltak.filter(t => t.prioritet === "høy");
+          const totInv   = høyAlle.reduce((s,t) => s + t.kostnad_snitt, 0);
+          const totStøtte= høyAlle.reduce((s,t) => s + t.støtte_snitt, 0);
+          const netto    = totInv - totStøtte;
+          const totBes   = høyAlle.reduce((s,t) => s + t.besparelse_kr, 0);
+          const breakEven= totBes > 0 ? Math.round(netto / totBes) : "–";
+          const bestTiltak = høyAlle[0];
+          const harIsolering = høyAlle.some(t => t.id.startsWith("isolering"));
+          const harVentilasjon = høyAlle.some(t => t.id === "ventilasjon");
+          const søknadstekst = `Jeg søker om støtte til energitiltak i min bolig. Boligen ble bygget i perioden ${resultat.bygData.label} og har i dag estimert energimerke ${merke.merke}. Tiltakene jeg planlegger å gjennomføre er: ${høyAlle.map(t=>t.navn).join(", ")}. Forventet energibesparelse er ca. ${høyAlle.reduce((s,t)=>s+Math.round(totalKwh*t.kWh_pct),0).toLocaleString("no")} kWh per år, noe som tilsvarer ca. ${totBes.toLocaleString("no")} kroner i reduserte strømutgifter. Tiltakene vil forbedre boligens energimerke fra ${merke.merke} til estimert ${merkePotensial.merke}.`;
+
+          return (
+            <>
+              {/* A – Økonomianalyse */}
+              <div style={S.card}>
+                <div style={S.h2}>💰 Økonomianalyse</div>
+                <div style={{...S.sub,marginBottom:16}}>Totalbilde for alle anbefalte tiltak</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                  {[
+                    { l:"Total investering",        v:`${Math.round(totInv/1000)} 000 kr`,  c:C.navyDark },
+                    { l:"Total Enova-støtte",        v:`${Math.round(totStøtte/1000)} 000 kr`, c:C.green },
+                    { l:"Netto kostnad etter støtte",v:`${Math.round(netto/1000)} 000 kr`,  c:C.navyDark },
+                    { l:"Estimert årsbesparelse",   v:`${totBes.toLocaleString("no")} kr`, c:C.green },
+                    { l:"Besparelse over 10 år",    v:`${(totBes*10).toLocaleString("no")} kr`, c:C.navyDark },
+                    { l:"Besparelse over 20 år",    v:`${(totBes*20).toLocaleString("no")} kr`, c:C.navyDark },
+                  ].map(x=>(
+                    <div key={x.l} style={{background:C.section,borderRadius:10,padding:"12px 13px"}}>
+                      <div style={{fontSize:"0.68rem",fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:4}}>{x.l}</div>
+                      <div style={{fontSize:"1.05rem",fontWeight:900,color:x.c}}>{x.v}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{color:"rgba(255,255,255,0.7)",fontSize:"0.82rem",fontWeight:600}}>Break-even tidspunkt</span>
+                  <span style={{color:C.greenLight,fontWeight:900,fontSize:"1.2rem"}}>{breakEven} år</span>
+                </div>
+              </div>
+
+              {/* B – Handlingsplan */}
+              <div style={S.card}>
+                <div style={S.h2}>🎯 Din handlingsplan – Start her</div>
+                <div style={{...S.sub,marginBottom:16}}>Prioritert rekkefølge for maksimal effekt</div>
+                {bestTiltak && (
+                  <div style={{background:`linear-gradient(135deg,${C.green}18,${C.greenLight}10)`,border:`2px solid ${C.green}50`,borderRadius:14,padding:"16px 18px",marginBottom:14}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                      <div style={{fontWeight:800,fontSize:"0.95rem",color:C.navyDark}}>{bestTiltak.ikon} {bestTiltak.navn}</div>
+                      <span style={{background:C.green,color:C.white,borderRadius:100,padding:"3px 10px",fontSize:"0.68rem",fontWeight:800}}>BESTE INVESTERING NÅ</span>
+                    </div>
+                    <div style={{fontSize:"0.8rem",color:C.muted,marginBottom:10}}>{bestTiltak.beskrivelse}</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                      {[
+                        {l:"Tilbakebetaling",v:bestTiltak.tilbakebetaling<=30?`${bestTiltak.tilbakebetaling} år`:">30 år"},
+                        {l:"Enova-støtte",v:`inntil ${(bestTiltak.støtte_max/1000).toFixed(0)}k kr`},
+                        {l:"Årsbesparelse",v:`~${bestTiltak.besparelse_kr.toLocaleString("no")} kr`},
+                      ].map(x=>(
+                        <div key={x.l} style={{background:"white",borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
+                          <div style={{fontSize:"0.63rem",color:C.muted,fontWeight:700,textTransform:"uppercase"}}>{x.l}</div>
+                          <div style={{fontSize:"0.82rem",fontWeight:800,color:C.navyDark,marginTop:2}}>{x.v}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {høyAlle.slice(1).map((t,i) => (
+                  <div key={t.id} style={{display:"flex",gap:12,alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${C.section}`}}>
+                    <div style={{width:24,height:24,borderRadius:"50%",background:C.navy,color:C.white,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.72rem",fontWeight:800,flexShrink:0}}>{i+2}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:700,fontSize:"0.85rem",color:C.navyDark}}>{t.ikon} {t.navn}</div>
+                      <div style={{fontSize:"0.74rem",color:C.muted}}>{t.tilbakebetaling<=30?`${t.tilbakebetaling} år tilbakebetaling`:"Lang sikt"} · ~{t.besparelse_kr.toLocaleString("no")} kr/år</div>
+                    </div>
+                  </div>
+                ))}
+                {harIsolering && harVentilasjon && (
+                  <div style={{marginTop:12,background:`${C.green}10`,border:`1px solid ${C.green}30`,borderRadius:10,padding:"10px 13px",fontSize:"0.79rem",color:C.navyDark,lineHeight:1.55}}>
+                    💡 <strong>Tips:</strong> Etterisolering og balansert ventilasjon gjøres gjerne samtidig – tettere bygg krever mekanisk ventilasjon for godt inneklima.
+                  </div>
+                )}
+              </div>
+
+              {/* C – Enova-søknadspakke */}
+              <div style={S.card}>
+                <div style={S.h2}>📋 Enova-søknadspakke</div>
+                <div style={{...S.sub,marginBottom:16}}>Dokumentasjonskrav per tiltak</div>
+                {høyAlle.map(t => (
+                  <div key={t.id} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",marginBottom:10}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6,gap:8}}>
+                      <div style={{fontWeight:700,fontSize:"0.86rem",color:C.navyDark}}>{t.ikon} {t.navn}</div>
+                      <span style={{color:C.green,fontWeight:700,fontSize:"0.78rem",flexShrink:0}}>inntil {(t.støtte_max/1000).toFixed(0)}k kr</span>
+                    </div>
+                    <div style={{fontSize:"0.76rem",color:C.muted,marginBottom:8,lineHeight:1.5}}>
+                      📄 {ENOVA_DOCS[t.id] || "Faktura fra godkjent fagperson, teknisk dokumentasjon"}
+                    </div>
+                    <a href="https://www.enova.no/privat/alle-energitiltak/" target="_blank" rel="noopener noreferrer"
+                      style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:"0.75rem",fontWeight:700,color:C.navy,textDecoration:"none",background:C.section,borderRadius:6,padding:"5px 10px"}}>
+                      Søk på enova.no →
+                    </a>
+                  </div>
+                ))}
+              </div>
+
+              {/* D – Ferdig søknadstekst */}
+              <div style={S.card}>
+                <div style={S.h2}>✍️ Klar søknadstekst for Enova</div>
+                <div style={{...S.sub,marginBottom:12}}>Kopier og lim inn i Enova-søknaden din</div>
+                <div style={{background:C.section,borderRadius:10,padding:"14px 16px",fontSize:"0.82rem",color:C.navyDark,lineHeight:1.7,marginBottom:12,fontStyle:"italic"}}>
+                  {søknadstekst}
+                </div>
+                <button
+                  style={{...S.btnG,display:"flex",alignItems:"center",gap:7,fontSize:"0.82rem"}}
+                  onClick={() => {
+                    navigator.clipboard.writeText(søknadstekst).then(() => {
+                      setKopiert(true);
+                      setTimeout(() => setKopiert(false), 2500);
+                    });
+                  }}
+                >
+                  {kopiert ? "✓ Kopiert!" : "📋 Kopier tekst"}
+                </button>
+              </div>
+
+              {/* E – Finansieringstips */}
+              <div style={S.card}>
+                <div style={S.h2}>🏦 Finansieringstips</div>
+                <div style={{display:"grid",gap:10}}>
+                  {[
+                    { ikon:"🏦", tittel:"Grønt boliglån", tekst:"Mange banker tilbyr lavere rente ved energioppgradering til A eller B-merke. Sjekk med din bank – besparelsen kan være 0,2–0,5 % poeng i redusert rente." },
+                    { ikon:"🏠", tittel:"Husbanken grønt lån", tekst:<>Kan gi gunstig finansiering for energioppgradering av eldre boliger. <a href="https://www.husbanken.no" target="_blank" rel="noopener noreferrer" style={{color:C.navy,fontWeight:700}}>Les mer på husbanken.no →</a></> },
+                    { ikon:"🔧", tittel:"Kombiner tiltak for lavere kostnad", tekst:"Bestill flere tiltak hos samme håndverker – du reduserer riggkostnader og får ofte bedre totalpris. Mange tilbyr pakkepriser." },
+                  ].map(x=>(
+                    <div key={x.tittel} style={{display:"flex",gap:12,alignItems:"flex-start",padding:"12px 14px",background:C.section,borderRadius:12}}>
+                      <span style={{fontSize:"1.3rem",flexShrink:0}}>{x.ikon}</span>
+                      <div>
+                        <div style={{fontWeight:700,fontSize:"0.85rem",color:C.navyDark,marginBottom:3}}>{x.tittel}</div>
+                        <div style={{fontSize:"0.78rem",color:C.muted,lineHeight:1.55}}>{x.tekst}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          );
+        })()}
 
         {/* Lead capture */}
         <div style={{...S.card,border:`1.5px solid ${C.green}40`,marginTop:8}}>
@@ -642,6 +840,7 @@ export default function App() {
   const [input, setInput]       = useState(null);
   const [betalt, setBetalt]     = useState(false);
   const [epost, setEpost]       = useState("");
+  const [pakke, setPakke]       = useState("energirapport");
   const [pdfSendt, setPdfSendt] = useState(false);
 
   // Håndter Stripe-redirect tilbake til appen
@@ -657,6 +856,7 @@ console.log("Session ID funnet:", sessionId);
     setResultat(lagret.resultat);
     setInput(lagret.input);
     setEpost(lagret.epost || "");
+    setPakke(lagret.pakke || "energirapport");
     setBetalt(true);
     setSkjerm("resultat");
 
@@ -664,7 +864,7 @@ console.log("Session ID funnet:", sessionId);
     fetch(`${BACKEND}/api/send-rapport`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: sessionId, resultatData: lagret, epost: lagret.epost }),
+      body: JSON.stringify({ session_id: sessionId, resultatData: lagret, epost: lagret.epost, pakke: lagret.pakke || "energirapport" }),
     }).then(() => setPdfSendt(true)).catch(console.error);
       window.history.replaceState({}, "", "/");
   }, []);
@@ -685,12 +885,12 @@ console.log("Session ID funnet:", sessionId);
     else lagOgVis({ areal: nyttSvar.areal||100, byggeår: nyttSvar.byggeår||1978, boligtype: nyttSvar.boligtype||"enebolig", klimasone: nyttSvar.klimasone||"3", oppvarming: nyttSvar.oppvarming||"direkte_el", vinduer_type: nyttSvar.vinduer_type||"dobbel", isolering_nivå:"normal", antall_etasjer:2 });
   }
 
-  function nullstill() { setSkjerm("start"); setSteg(0); setSvar({}); setResultat(null); setInput(null); setBetalt(false); setPdfSendt(false); }
+  function nullstill() { setSkjerm("start"); setSteg(0); setSvar({}); setResultat(null); setInput(null); setBetalt(false); setPakke("energirapport"); setPdfSendt(false); }
 
   // Resultat-skjerm
   if (skjerm === "resultat" && resultat) {
-    if (betalt) return <FullRapport resultat={resultat} epost={epost} pdfSendt={pdfSendt} onNullstill={nullstill}/>;
-    return <Betalingsmur resultat={resultat} input={input} onBetalt={e => { setEpost(e); setBetalt(true); }}/>;
+    if (betalt) return <FullRapport resultat={resultat} epost={epost} pdfSendt={pdfSendt} pakke={pakke} onNullstill={nullstill}/>;
+    return <Betalingsmur resultat={resultat} input={input} onBetalt={(e, p) => { setEpost(e); setPakke(p); setBetalt(true); }}/>;
   }
 
   // Avansert skjema
