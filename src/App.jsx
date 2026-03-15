@@ -125,7 +125,7 @@ const C = { bg:"#f0ede8",white:"#ffffff",navy:"#1b3a5c",navyDark:"#0f2540",navyM
 const S = {
   app:    { minHeight:"100vh", background:`linear-gradient(160deg,${C.bg} 0%,#e8f4ec 100%)`, fontFamily:"'Segoe UI',system-ui,sans-serif", paddingBottom:60 },
   header: { background:"rgba(255,255,255,0.88)", backdropFilter:"blur(12px)", borderBottom:`1px solid ${C.border}`, padding:"14px 24px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 },
-  logo:   { fontFamily:"Georgia,serif", fontWeight:700, fontSize:"1.2rem", color:C.navy },
+  logo:   { fontFamily:"'Playfair Display',Georgia,serif", fontWeight:700, fontSize:"1.25rem", color:C.navy, letterSpacing:"-0.01em" },
   wrap:   { maxWidth:640, margin:"0 auto", padding:"28px 18px" },
   card:   { background:C.white, borderRadius:20, padding:"28px 24px", boxShadow:"0 8px 40px rgba(27,58,92,0.09)", border:`1px solid ${C.border}`, marginBottom:16 },
   tag:    { fontSize:"0.72rem", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:C.green, marginBottom:6 },
@@ -148,7 +148,13 @@ function LogoSvg() {
   return <svg width="34" height="34" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="14" fill={C.bg}/><path d="M50 12 L82 38 L82 82 Q82 86 78 86 L22 86 Q18 86 18 82 L18 38 Z" fill={C.navy}/><path d="M50 18 L78 42 L78 80 Q78 82 76 82 L24 82 Q22 82 22 80 L22 42 Z" fill="url(#lg)"/><defs><linearGradient id="lg" x1="50" y1="18" x2="50" y2="82" gradientUnits="userSpaceOnUse"><stop stopColor={C.greenLight}/><stop offset="1" stopColor="#1a9444"/></linearGradient></defs><rect x="44" y="22" width="12" height="12" rx="2" fill="white" opacity=".9"/><path d="M54 48 L46 62 L52 62 L46 76 L62 56 L55 56 Z" fill="white"/></svg>;
 }
 function Header({ onBack }) {
-  return <div style={S.header}><LogoSvg/><span style={S.logo}>BoligEffekt</span>{onBack && <button onClick={onBack} style={{...S.btnG,marginLeft:"auto"}}>← Tilbake</button>}</div>;
+  return (
+    <>
+      <link rel="preconnect" href="https://fonts.googleapis.com"/>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap"/>
+      <div style={S.header}><LogoSvg/><span style={S.logo}>BoligEffekt</span>{onBack && <button onClick={onBack} style={{...S.btnG,marginLeft:"auto"}}>← Tilbake</button>}</div>
+    </>
+  );
 }
 function Merke({ m, stor }) {
   const sz = stor ? 76 : 56;
@@ -222,18 +228,29 @@ function Betalingsmur({ resultat, input, onBetalt }) {
         </div>
 
         {/* Hva du får */}
-        <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,borderRadius:16,padding:"20px",marginBottom:16}}>
-          <div style={{color:C.white,fontWeight:800,marginBottom:12}}>🎯 Full rapport inkluderer:</div>
-          {[
-            `${tiltak.length} prioriterte tiltak med tilbakebetalingstid`,
-            `Enova-støtteoversikt – opptil ${totalStøtte.toLocaleString("no")} kr`,
-            "EPBD 2024-status og EU-krav",
-            "Tekniske beregningsdata",
-            "📄 PDF-rapport sendt på e-post automatisk",
-          ].map(x=><div key={x} style={{display:"flex",gap:10,alignItems:"center",marginBottom:8}}>
-            <span style={{color:C.greenLight,fontWeight:800}}>✓</span>
-            <span style={{color:"rgba(255,255,255,0.85)",fontSize:"0.85rem"}}>{x}</span>
-          </div>)}
+        <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,borderRadius:16,padding:"24px",marginBottom:16}}>
+          <div style={{color:C.white,fontWeight:800,fontSize:"1rem",marginBottom:16,letterSpacing:"-0.01em"}}>🎯 Dette får du i full rapport:</div>
+          <div style={{display:"grid",gap:10}}>
+            {[
+              { ikon:"📋", tittel:`${tiltak.length} konkrete tiltak`, tekst:`Rangert etter tilbakebetalingstid – du ser nøyaktig hvilke tiltak som lønner seg for din bolig` },
+              { ikon:"💰", tittel:`Enova-støtteoversikt – inntil ${totalStøtte.toLocaleString("no")} kr`, tekst:"Nøyaktig hvilke støtteordninger du kan søke, med beløp og lenker til Enova" },
+              { ikon:"📉", tittel:"Estimert årsbesparelse per tiltak", tekst:"Se hva hvert tiltak sparer deg i strømkostnader hvert år, beregnet på din bolig" },
+              { ikon:"🇪🇺", tittel:"EPBD 2024-status og EU-krav", tekst:"Sjekk om boligen din oppfyller EU-direktivets krav for 2030 og 2033 – viktig ved salg" },
+              { ikon:"🔧", tittel:"Tekniske beregningsdata", tekst:"Full transparens: U-verdier, graddagstall, COP-faktor og primærenergi etter NS-EN ISO 52000" },
+              { ikon:"📄", tittel:"PDF-rapport sendt til e-post", tekst:"Ferdig formatert rapport du kan dele med håndverkere, bank eller eiendomsmegler" },
+            ].map(x=>(
+              <div key={x.tittel} style={{display:"flex",gap:12,alignItems:"flex-start",background:"rgba(255,255,255,0.07)",borderRadius:10,padding:"12px 14px"}}>
+                <span style={{fontSize:"1.2rem",flexShrink:0,marginTop:1}}>{x.ikon}</span>
+                <div>
+                  <div style={{color:C.white,fontWeight:700,fontSize:"0.84rem",marginBottom:2}}>{x.tittel}</div>
+                  <div style={{color:"rgba(255,255,255,0.60)",fontSize:"0.76rem",lineHeight:1.5}}>{x.tekst}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{marginTop:14,borderTop:"1px solid rgba(255,255,255,0.12)",paddingTop:12,fontSize:"0.76rem",color:"rgba(255,255,255,0.5)"}}>
+            Engangskjøp · Ingen abonnement · Rapport tilgjengelig øyeblikkelig
+          </div>
         </div>
 
         {/* Betalingskort */}
@@ -428,6 +445,138 @@ function FullRapport({ resultat, epost, pdfSendt, onNullstill }) {
 }
 
 // ─────────────────────────────────────────────
+// INFO-FANER (startskjerm)
+// ─────────────────────────────────────────────
+function InfoFaner() {
+  const [fane, setFane] = useState("om");
+  const faner = [
+    { id:"om",    lbl:"Om tjenesten" },
+    { id:"lover", lbl:"Lover & regler" },
+    { id:"enova", lbl:"Enova-støtte" },
+    { id:"faar",  lbl:"Hva du får" },
+  ];
+  const fanestil = aktiv => ({
+    padding:"9px 13px", border:"none", cursor:"pointer", fontWeight:700,
+    fontSize:"0.78rem", borderRadius:8, whiteSpace:"nowrap",
+    background: aktiv ? C.navy : "transparent",
+    color:      aktiv ? C.white : C.muted,
+    transition:"all .15s",
+  });
+
+  return (
+    <div style={{marginTop:28}}>
+      <div style={{display:"flex",gap:4,background:C.section,borderRadius:12,padding:5,overflowX:"auto",marginBottom:0}}>
+        {faner.map(f=><button key={f.id} style={fanestil(fane===f.id)} onClick={()=>setFane(f.id)}>{f.lbl}</button>)}
+      </div>
+      <div style={{...S.card,borderRadius:"0 0 20px 20px",borderTop:"none",marginTop:0,borderTopLeftRadius:0,borderTopRightRadius:0}}>
+
+        {fane === "om" && (
+          <div>
+            <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:10}}>Hva er BoligEffekt?</div>
+            <p style={{...S.sub,marginBottom:14}}>BoligEffekt beregner et estimert energimerke (A–G) for din bolig basert på byggeår, boligtype, oppvarmingssystem og lokale klimadata. Du trenger ingen fagkunnskap – svar på 6 enkle spørsmål og få resultatet på sekunder.</p>
+            <div style={{display:"grid",gap:10}}>
+              {[
+                { ikon:"⚡", tittel:"Energimerke A–G på sekunder", tekst:"Basert på NS-EN ISO 52000, offisielle U-verdier fra TEK-historikk og graddagstall fra NIBIO." },
+                { ikon:"🛠️", tittel:"Konkrete tiltak ranket etter lønnsomhet", tekst:"Vi beregner tilbakebetalingstid, Enova-støtte og årsbesparelse for hvert tiltak tilpasset din bolig." },
+                { ikon:"🏦", tittel:"Grunnlag for refinansiering eller salg", tekst:"Energimerket og tiltaksplanen gir deg dokumentasjon du kan bruke overfor bank, eiendomsmegler eller håndverkere." },
+                { ikon:"🌍", tittel:"EU EPBD 2024-sjekk", tekst:"Sjekk om din bolig oppfyller de kommende EU-kravene for 2030 og 2033 – viktig å vite før du selger." },
+              ].map(x=>(
+                <div key={x.tittel} style={{display:"flex",gap:12,alignItems:"flex-start",padding:"10px 0",borderBottom:`1px solid ${C.section}`}}>
+                  <span style={{fontSize:"1.3rem",flexShrink:0}}>{x.ikon}</span>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:"0.85rem",color:C.navyDark,marginBottom:2}}>{x.tittel}</div>
+                    <div style={{fontSize:"0.79rem",color:C.muted,lineHeight:1.55}}>{x.tekst}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {fane === "lover" && (
+          <div>
+            <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:10}}>Regelverk & standarder</div>
+            <div style={{display:"grid",gap:12}}>
+              {[
+                { tag:"TEK17", tittel:"Teknisk forskrift 2017 (TEK17)", tekst:"Gjeldende byggeforskrift i Norge. Stiller krav til U-verdier (vegg ≤ 0,18, tak ≤ 0,13 W/m²K), lufttetthet (n50 ≤ 0,6/h) og primærenergibehov for nye bygg.", farge:C.navy },
+                { tag:"EPBD 2024", tittel:"EU-direktiv 2024/1275 (EPBD recast)", tekst:"Europaparlamentets reviderte energidirektiv krever at alle boliger oppnår minimum energimerke E innen 2030 og merke D innen 2033. nZEB-standard (A/B) kreves for nye bygg fra 2021.", farge:"#6d28d9" },
+                { tag:"Energimerkeforskriften", tittel:"Energimerkeforskriften (FOR-2009-12-18-1665)", tekst:"Norsk forskrift som pålegger selgere å fremlegge gyldig energiattest ved salg og utleie. Offisielt merke utstedes kun av godkjent energirådgiver via Enovas portal.", farge:C.green },
+                { tag:"NS-EN ISO 52000", tittel:"NS-EN ISO 52000 – Energiytelse i bygninger", tekst:"Europeisk standard som definerer beregningsmetodikk for levert energi, primærenergi og energimerking. BoligEffekt benytter forenklet beregning iht. denne standarden.", farge:C.gold },
+              ].map(x=>(
+                <div key={x.tag} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",borderLeft:`4px solid ${x.farge}`}}>
+                  <span style={{fontSize:"0.68rem",fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:x.farge}}>{x.tag}</span>
+                  <div style={{fontWeight:700,fontSize:"0.88rem",color:C.navyDark,margin:"4px 0 5px"}}>{x.tittel}</div>
+                  <div style={{fontSize:"0.78rem",color:C.muted,lineHeight:1.55}}>{x.tekst}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {fane === "enova" && (
+          <div>
+            <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:4}}>Enova-støtte 2024/2025</div>
+            <div style={{...S.sub,marginBottom:14}}>Støttebeløp er veiledende. Søk via enova.no.</div>
+            <div style={{display:"grid",gap:8}}>
+              {[
+                { tiltak:"Luft/luft-varmepumpe",        min:7000,  max:11000, notat:"Per pumpe, krav til COP ≥ 3,5" },
+                { tiltak:"Luft/vann-varmepumpe",         min:20000, max:35000, notat:"Krever vannbåren distribusjon" },
+                { tiltak:"Etterisolering loft/tak",      min:5000,  max:15000, notat:"Min. 25 cm total isolasjonstykkelse" },
+                { tiltak:"Etterisolering yttervegger",   min:15000, max:30000, notat:"Kombineres gjerne med fasaderehab" },
+                { tiltak:"3-lags vinduer",               min:10000, max:25000, notat:"U-verdi ≤ 0,80 W/m²K" },
+                { tiltak:"Balansert ventilasjon m/VGJ",  min:10000, max:20000, notat:"Varmegjenvinner ≥ 80 %" },
+                { tiltak:"Solcelleanlegg",               min:20000, max:35000, notat:"Min. 3 kWp installert effekt" },
+                { tiltak:"Tetthetsforbedring",           min:5000,  max:10000, notat:"Verifisert med trykktest" },
+              ].map(x=>(
+                <div key={x.tiltak} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 13px",background:C.section,borderRadius:10,gap:12}}>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:"0.83rem",color:C.navyDark}}>{x.tiltak}</div>
+                    <div style={{fontSize:"0.72rem",color:C.muted,marginTop:1}}>{x.notat}</div>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{fontWeight:800,fontSize:"0.88rem",color:C.green}}>{x.min.toLocaleString("no")}–{x.max.toLocaleString("no")} kr</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{marginTop:12,fontSize:"0.72rem",color:"#bbb",lineHeight:1.6}}>Kilde: Enova.no · Beløp kan endres. Søk alltid før du bestiller håndverker.</div>
+          </div>
+        )}
+
+        {fane === "faar" && (
+          <div>
+            <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:4}}>Hva er inkludert i rapporten?</div>
+            <div style={{...S.sub,marginBottom:16}}>Full rapport koster {PRIS} kr og leveres øyeblikkelig på e-post som PDF.</div>
+            <div style={{display:"grid",gap:10}}>
+              {[
+                { ikon:"📊", tittel:"Komplett tiltaksplan", tekst:"Alle relevante energitiltak for akkurat din bolig, rangert etter tilbakebetalingstid. Du ser kostnad, besparelse og Enova-støtte for hvert enkelt tiltak." },
+                { ikon:"💰", tittel:"Enova-støtteoversikt med beløp", tekst:"Hvilke Enova-program du kan søke, eksakte støttebeløp og hva som kreves for å kvalifisere. Spar tid på å finne frem selv." },
+                { ikon:"📉", tittel:"Estimert årsbesparelse", tekst:"Beregnet strømsparing i kroner per år for hvert tiltak, basert på din faktiske bolig, klimasone og nåværende strømpris." },
+                { ikon:"🇪🇺", tittel:"EU EPBD 2024-status", tekst:"Sjekk om boligen din oppfyller kravene for 2030 (merke E) og 2033 (merke D). Viktig informasjon ved salg eller refinansiering." },
+                { ikon:"🔬", tittel:"Tekniske beregningsdata", tekst:"Full transparens i beregningen: U-verdier, graddagstall, COP-faktorer, primærenergi og levert energi etter NS-EN ISO 52000." },
+                { ikon:"📄", tittel:"PDF-rapport på e-post", tekst:"Profesjonelt formatert PDF som du kan dele med håndverkere for pristilbud, bank for grønne boliglån, eller eiendomsmegler ved salg." },
+              ].map(x=>(
+                <div key={x.tittel} style={{display:"flex",gap:12,alignItems:"flex-start",padding:"12px 14px",background:C.section,borderRadius:12}}>
+                  <span style={{fontSize:"1.3rem",flexShrink:0}}>{x.ikon}</span>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:"0.85rem",color:C.navyDark,marginBottom:3}}>{x.tittel}</div>
+                    <div style={{fontSize:"0.78rem",color:C.muted,lineHeight:1.55}}>{x.tekst}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{marginTop:14,background:`${C.green}12`,border:`1px solid ${C.green}30`,borderRadius:10,padding:"12px 14px",fontSize:"0.8rem",color:C.navyDark,lineHeight:1.6}}>
+              ✅ Engangskjøp · Ingen abonnement · Betaling via Stripe · Rapport på e-post umiddelbart
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // HOVED-APP
 // ─────────────────────────────────────────────
 export default function App() {
@@ -575,19 +724,8 @@ console.log("Session ID funnet:", sessionId);
             <div style={{...S.sub,marginBottom:16}}>6 spørsmål · 2 minutter · Ingen fagkunnskap nødvendig</div>
             <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,color:C.white,borderRadius:10,padding:"12px 28px",fontWeight:700,fontSize:"0.95rem",display:"inline-block"}}>Start her →</div>
           </div>
-          <div style={{...S.card,cursor:"pointer"}} onClick={()=>setSkjerm("avansert")}
-            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";}}
-            onMouseLeave={e=>{e.currentTarget.style.transform="";}}>
-            <div style={{display:"flex",alignItems:"center",gap:14}}>
-              <div style={{fontSize:"1.8rem"}}>⚙️</div>
-              <div>
-                <div style={{fontWeight:700,fontSize:"1rem",color:C.navyDark,marginBottom:3}}>Avansert analyse</div>
-                <div style={S.sub}>Skriv inn egne verdier · Mer presis · For fagfolk</div>
-              </div>
-              <div style={{marginLeft:"auto",color:C.muted,fontSize:"1.2rem"}}>→</div>
-            </div>
-          </div>
         </div>
+        <InfoFaner/>
         <p style={{textAlign:"center",fontSize:"0.7rem",color:"#bbb",marginTop:20}}>NS-EN ISO 52000 · TEK17 · EU EPBD 2024/1275 · Gratis energimerke-estimat</p>
       </div>
     </div>
