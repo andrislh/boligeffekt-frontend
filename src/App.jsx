@@ -798,7 +798,7 @@ function InfoFaner() {
         {fane === "faar" && (
           <div>
             <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:4}}>Hva er inkludert i rapporten?</div>
-            <div style={{...S.sub,marginBottom:16}}>Full rapport koster {PRIS} kr og leveres øyeblikkelig på e-post som PDF.</div>
+            <div style={{...S.sub,marginBottom:16}}>Energirapport fra 199 kr, Oppgraderingsplan 399 kr – leveres øyeblikkelig på e-post som PDF.</div>
             <div style={{display:"grid",gap:10}}>
               {[
                 { ikon:"📊", tittel:"Komplett tiltaksplan", tekst:"Alle relevante energitiltak for akkurat din bolig, rangert etter tilbakebetalingstid. Du ser kostnad, besparelse og Enova-støtte for hvert enkelt tiltak." },
