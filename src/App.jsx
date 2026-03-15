@@ -847,12 +847,17 @@ export default function App() {
   useEffect(() => {
     const params    = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
-    if (!sessionId) { console.log("Ingen session_id i URL"); return; }
-console.log("Session ID funnet:", sessionId);
+    if (!sessionId) return;
 
     const lagret = hentData();
-    if (!lagret) return;
+    if (!lagret || !lagret.resultat) {
+      console.error("[REDIRECT] Ingen lagret data i sessionStorage – kan ikke gjenopprette rapport");
+      return;
+    }
 
+    console.log("[REDIRECT] Gjenoppretter rapport – pakke:", lagret.pakke, "| e-post:", lagret.epost);
+
+    // Gjenopprett all state fra før Stripe-redirect
     setResultat(lagret.resultat);
     setInput(lagret.input);
     setEpost(lagret.epost || "");
@@ -860,13 +865,20 @@ console.log("Session ID funnet:", sessionId);
     setBetalt(true);
     setSkjerm("resultat");
 
-    // Send PDF-rapport automatisk
+    // Fjern session_id fra URL så refresh ikke re-trigger
+    window.history.replaceState({}, "", "/");
+
+    // Send PDF-rapport automatisk etter betaling
     fetch(`${BACKEND}/api/send-rapport`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: sessionId, resultatData: lagret, epost: lagret.epost, pakke: lagret.pakke || "energirapport" }),
+      body: JSON.stringify({
+        session_id:   sessionId,
+        resultatData: lagret,
+        epost:        lagret.epost,
+        pakke:        lagret.pakke || "energirapport",
+      }),
     }).then(() => setPdfSendt(true)).catch(console.error);
-      window.history.replaceState({}, "", "/");
   }, []);
 
   function lagOgVis(inp) {
