@@ -290,6 +290,10 @@ function Betalingsmur({ resultat, input, onBetalt }) {
 function FullRapport({ resultat, epost, pdfSendt, onNullstill }) {
   const [visAlle, setVisAlle]     = useState(false);
   const [fane, setFane]           = useState("tiltak");
+  const [leadNavn, setLeadNavn]   = useState("");
+  const [leadTlf, setLeadTlf]     = useState("");
+  const [leadSendt, setLeadSendt] = useState(false);
+  const [leadLaster, setLeadLaster] = useState(false);
   const { kwhPerM2, primærPerM2, totalKwh, merke, merkePotensial, strømkostnad, tiltak } = resultat;
   const høy = tiltak.filter(t => t.prioritet === "høy");
   const totalStøtte     = høy.reduce((s,t) => s + t.støtte_snitt, 0);
@@ -432,6 +436,56 @@ function FullRapport({ resultat, epost, pdfSendt, onNullstill }) {
             </div>
           </div>
         )}
+
+        {/* Lead capture */}
+        <div style={{...S.card,border:`1.5px solid ${C.green}40`,marginTop:8}}>
+          {leadSendt ? (
+            <div style={{textAlign:"center",padding:"16px 0"}}>
+              <div style={{fontSize:"2rem",marginBottom:10}}>🙌</div>
+              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:6}}>Takk!</div>
+              <div style={{fontSize:"0.88rem",color:C.muted,lineHeight:1.6}}>Vi tar kontakt innen 1–2 virkedager.</div>
+            </div>
+          ) : (
+            <>
+              <div style={{display:"flex",alignItems:"flex-start",gap:14,marginBottom:16}}>
+                <div style={{fontSize:"1.8rem",flexShrink:0}}>🔨</div>
+                <div>
+                  <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:4}}>Vil du ha hjelp med gjennomføringen?</div>
+                  <div style={{fontSize:"0.82rem",color:C.muted,lineHeight:1.55}}>Vi kan koble deg med kvalifiserte håndverkere i ditt område for tiltakene i rapporten din.</div>
+                </div>
+              </div>
+              <div style={{display:"grid",gap:10,marginBottom:12}}>
+                <div>
+                  <label style={S.lbl}>Navn</label>
+                  <input style={S.inp} type="text" placeholder="Ola Nordmann" value={leadNavn} onChange={e=>setLeadNavn(e.target.value)}/>
+                </div>
+                <div>
+                  <label style={S.lbl}>Telefonnummer</label>
+                  <input style={S.inp} type="tel" placeholder="400 00 000" value={leadTlf} onChange={e=>setLeadTlf(e.target.value)}/>
+                </div>
+              </div>
+              <button
+                style={{...S.btnP,background:`linear-gradient(135deg,${C.green},${C.greenLight})`,boxShadow:`0 6px 20px ${C.green}44`,opacity:leadLaster?0.7:1}}
+                disabled={leadLaster}
+                onClick={async () => {
+                  if (!leadNavn.trim() || !leadTlf.trim()) return;
+                  setLeadLaster(true);
+                  const top3 = tiltak.filter(t=>t.prioritet==="høy").slice(0,3).map(t=>t.navn);
+                  try {
+                    await fetch(`${BACKEND}/api/lead`, {
+                      method:"POST", headers:{"Content-Type":"application/json"},
+                      body: JSON.stringify({ navn: leadNavn, telefon: leadTlf, epost, merke: merke.merke, tiltak: top3 }),
+                    });
+                  } catch(_) {}
+                  setLeadSendt(true);
+                  setLeadLaster(false);
+                }}
+              >
+                {leadLaster ? "Sender…" : "Ja, kontakt meg →"}
+              </button>
+            </>
+          )}
+        </div>
 
         <div style={{textAlign:"center",marginTop:8}}>
           <button onClick={onNullstill} style={S.btnG}>Analyser en annen bolig →</button>
