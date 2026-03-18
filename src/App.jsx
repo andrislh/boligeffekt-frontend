@@ -707,7 +707,8 @@ function KunnskapsHub() {
 
   useEffect(() => {
     if (fane === "nyheter" && nyheter === null) hentNyheter();
-  }, [fane]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fane, nyheter]);
 
   async function hentNyheter(tving = false) {
     setNyLaster(true); setNyFeil(false);
