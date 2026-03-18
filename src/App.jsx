@@ -966,7 +966,9 @@ function KunnskapsHub() {
 // ─────────────────────────────────────────────
 function Chatbot() {
   const [aapen, setAapen]       = useState(false);
-  const [historikk, setHistorikk] = useState([]);
+  const [historikk, setHistorikk] = useState([
+    { rolle:"assistant", innhold:"Hei! Jeg er BoligEffekt-assistenten. Spør meg om energimerking, Enova-støtte eller TEK17 👋" }
+  ]);
   const [melding, setMelding]   = useState("");
   const [laster, setLaster]     = useState(false);
   const msgsRef = React.useRef(null);
@@ -1010,12 +1012,6 @@ function Chatbot() {
 
           {/* Meldinger */}
           <div ref={msgsRef} style={{flex:1,overflowY:"auto",padding:"12px 12px 4px",display:"flex",flexDirection:"column",gap:8}}>
-            {historikk.length === 0 && (
-              <div style={{textAlign:"center",padding:"16px 8px",color:C.muted,fontSize:"0.78rem",lineHeight:1.6}}>
-                <div style={{fontSize:"1.5rem",marginBottom:6}}>💬</div>
-                Spør meg om energimerking, Enova-støtte, TEK17 eller EPBD 2024.
-              </div>
-            )}
             {historikk.map((h, i) => (
               <div key={i} style={{display:"flex",justifyContent:h.rolle==="user"?"flex-end":"flex-start"}}>
                 <div style={{
