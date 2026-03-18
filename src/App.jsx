@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
 const PAKKER = {
@@ -697,19 +697,32 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
 }
 
 // ─────────────────────────────────────────────
-// INFO-FANER (startskjerm)
+// KNOWLEDGE HUB (Lær mer)
 // ─────────────────────────────────────────────
-function InfoFaner() {
-  const [fane, setFane] = useState("om");
-  const faner = [
-    { id:"om",    lbl:"Om tjenesten" },
-    { id:"lover", lbl:"Lover & regler" },
-    { id:"enova", lbl:"Enova-støtte" },
-    { id:"faar",  lbl:"Hva du får" },
-  ];
+function KunnskapsHub() {
+  const [fane, setFane] = useState("energimerking");
+  const [nyheter, setNyheter]   = useState(null);
+  const [nyLaster, setNyLaster] = useState(false);
+  const [nyFeil, setNyFeil]     = useState(false);
+
+  useEffect(() => {
+    if (fane === "nyheter" && nyheter === null) hentNyheter();
+  }, [fane]);
+
+  async function hentNyheter(tving = false) {
+    setNyLaster(true); setNyFeil(false);
+    try {
+      const res  = await fetch(`${BACKEND}/api/nyheter`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ tving }) });
+      const data = await res.json();
+      if (data.feil) throw new Error(data.feil);
+      setNyheter(data.nyheter);
+    } catch (_) { setNyFeil(true); }
+    setNyLaster(false);
+  }
+
   const fanestil = aktiv => ({
     padding:"9px 13px", border:"none", cursor:"pointer", fontWeight:700,
-    fontSize:"0.78rem", borderRadius:8, whiteSpace:"nowrap",
+    fontSize:"0.77rem", borderRadius:8, whiteSpace:"nowrap",
     background: aktiv ? C.navy : "transparent",
     color:      aktiv ? C.white : C.muted,
     transition:"all .15s",
@@ -717,27 +730,56 @@ function InfoFaner() {
 
   return (
     <div style={{marginTop:28}}>
+      <div style={{textAlign:"center",marginBottom:14}}>
+        <div style={S.tag}>Lær mer</div>
+        <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark}}>Kunnskapsbase om energimerking</div>
+      </div>
       <div style={{display:"flex",gap:4,background:C.section,borderRadius:12,padding:5,overflowX:"auto",marginBottom:0}}>
-        {faner.map(f=><button key={f.id} style={fanestil(fane===f.id)} onClick={()=>setFane(f.id)}>{f.lbl}</button>)}
+        {[["energimerking","Energimerking"],["enova","Enova 2025"],["lover","Lover & regler"],["nyheter","Nyheter"]].map(([id,lbl])=>(
+          <button key={id} style={fanestil(fane===id)} onClick={()=>setFane(id)}>{lbl}</button>
+        ))}
       </div>
       <div style={{...S.card,borderRadius:"0 0 20px 20px",borderTop:"none",marginTop:0,borderTopLeftRadius:0,borderTopRightRadius:0}}>
 
-        {fane === "om" && (
+        {/* TAB 1 – Energimerking forklart */}
+        {fane === "energimerking" && (
           <div>
-            <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:10}}>Hva er BoligEffekt?</div>
-            <p style={{...S.sub,marginBottom:14}}>BoligEffekt beregner et estimert energimerke (A–G) for din bolig basert på byggeår, boligtype, oppvarmingssystem og lokale klimadata. Du trenger ingen fagkunnskap – svar på 6 enkle spørsmål og få resultatet på sekunder.</p>
+            <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:12}}>Energimerking A–G forklart</div>
+
+            {/* Visuell skala */}
+            <div style={{marginBottom:18}}>
+              {[
+                {m:"A",farge:"#00a651",maks:"< 95",tekst:"nZEB-klar – svært energieffektiv"},
+                {m:"B",farge:"#57b946",maks:"95–120",tekst:"God standard – lavenergibolig"},
+                {m:"C",farge:"#b5d334",maks:"120–160",tekst:"Over middels – moderne TEK10-bygg"},
+                {m:"D",farge:"#ffd200",maks:"160–210",tekst:"Middels – typisk 1990-tallsbolig"},
+                {m:"E",farge:"#f7941d",maks:"210–265",tekst:"Under middels – EU-krav 2030"},
+                {m:"F",farge:"#ed1c24",maks:"265–335",tekst:"Dårlig – bør oppgraderes"},
+                {m:"G",farge:"#9e1a20",maks:"> 335",tekst:"Svært dårlig – høy prioritet"},
+              ].map(r => (
+                <div key={r.m} style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+                  <div style={{width:28,height:28,borderRadius:7,background:r.farge,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:"0.9rem",flexShrink:0}}>{r.m}</div>
+                  <div style={{flex:1,height:10,background:r.farge,borderRadius:100,opacity:0.25,position:"relative"}}>
+                    <div style={{position:"absolute",inset:0,background:r.farge,borderRadius:100,width:"100%",opacity:0.85}}/>
+                  </div>
+                  <div style={{fontSize:"0.72rem",color:C.navyDark,fontWeight:700,flexShrink:0,width:60,textAlign:"right"}}>{r.maks} kWh</div>
+                </div>
+              ))}
+              <div style={{fontSize:"0.7rem",color:C.muted,marginTop:6}}>Tall i kWh/m²/år (levert energi)</div>
+            </div>
+
             <div style={{display:"grid",gap:10}}>
               {[
-                { ikon:"⚡", tittel:"Energimerke A–G på sekunder", tekst:"Basert på NS-EN ISO 52000, offisielle U-verdier fra TEK-historikk og graddagstall fra NIBIO." },
-                { ikon:"🛠️", tittel:"Konkrete tiltak ranket etter lønnsomhet", tekst:"Vi beregner tilbakebetalingstid, Enova-støtte og årsbesparelse for hvert tiltak tilpasset din bolig." },
-                { ikon:"🏦", tittel:"Grunnlag for refinansiering eller salg", tekst:"Energimerket og tiltaksplanen gir deg dokumentasjon du kan bruke overfor bank, eiendomsmegler eller håndverkere." },
-                { ikon:"🌍", tittel:"EU EPBD 2024-sjekk", tekst:"Sjekk om din bolig oppfyller de kommende EU-kravene for 2030 og 2033 – viktig å vite før du selger." },
+                {ikon:"📐", tittel:"Hvordan beregnes energimerket?", tekst:"Energimerket beregnes ut fra boligens levert energi per m² per år (kWh/m²/år). Dette inkluderer varmetap gjennom vegger, tak og gulv (transmisjon), luftlekkasjer (infiltrasjon) og oppvarmingssystemets virkningsgrad. Beregningsstandarden er NS-EN ISO 52000."},
+                {ikon:"💰", tittel:"Hvorfor betyr energimerket noe for boligverdien?", tekst:"Studier viser at boliger med energimerke A eller B kan selges for 3–8 % mer enn tilsvarende boliger med lavere merke. I tillegg gir godt energimerke tilgang til grønne boliglån med 0,2–0,5 % lavere rente."},
+                {ikon:"🤔", tittel:"Vanlige misforståelser", tekst:"Mange tror at nye vinduer alene gir A-merke – det stemmer ikke. Det er den totale varmebalansen som teller. En gammel enebolig med god varmepumpe og etterpolert tak kan slå en ny enebolig med dårlig oppvarming. Oppvarmingssystemet teller mye."},
+                {ikon:"🏛️", tittel:"Estimat vs. offisielt merke", tekst:"BoligEffekts merke er et estimat basert på statistiske data for byggeår og standard. Et offisielt energimerke krever befaring av godkjent energirådgiver og registrering i Enovas database. Det offisielle merket er påkrevet ved salg og utleie."},
               ].map(x=>(
-                <div key={x.tittel} style={{display:"flex",gap:12,alignItems:"flex-start",padding:"10px 0",borderBottom:`1px solid ${C.section}`}}>
-                  <span style={{fontSize:"1.3rem",flexShrink:0}}>{x.ikon}</span>
+                <div key={x.tittel} style={{display:"flex",gap:12,alignItems:"flex-start",padding:"11px 13px",background:C.section,borderRadius:12}}>
+                  <span style={{fontSize:"1.2rem",flexShrink:0}}>{x.ikon}</span>
                   <div>
-                    <div style={{fontWeight:700,fontSize:"0.85rem",color:C.navyDark,marginBottom:2}}>{x.tittel}</div>
-                    <div style={{fontSize:"0.79rem",color:C.muted,lineHeight:1.55}}>{x.tekst}</div>
+                    <div style={{fontWeight:700,fontSize:"0.84rem",color:C.navyDark,marginBottom:3}}>{x.tittel}</div>
+                    <div style={{fontSize:"0.77rem",color:C.muted,lineHeight:1.6}}>{x.tekst}</div>
                   </div>
                 </div>
               ))}
@@ -745,85 +787,287 @@ function InfoFaner() {
           </div>
         )}
 
+        {/* TAB 2 – Enova-guiden 2025 */}
+        {fane === "enova" && (
+          <div>
+            <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:4}}>Enova-guiden 2025</div>
+            <div style={{...S.sub,marginBottom:16}}>Oppdaterte støttebeløp og søknadsveiledning. Søk alltid via enova.no.</div>
+
+            {/* Støtteoversikt */}
+            <div style={{display:"grid",gap:7,marginBottom:18}}>
+              {[
+                {tiltak:"Luft/luft-varmepumpe",       min:7000,  max:11000, krav:"COP ≥ 3,5 – søk FØR installasjon"},
+                {tiltak:"Luft/vann-varmepumpe",        min:20000, max:35000, krav:"Krever vannbåren distribusjon i boligen"},
+                {tiltak:"Etterisolering loft/tak",     min:5000,  max:15000, krav:"Min. 250 mm total isolasjonstykkelse etter tiltak"},
+                {tiltak:"Etterisolering yttervegger",  min:15000, max:30000, krav:"Kombinert med fasadeoppgradering gir best pris"},
+                {tiltak:"3-lags vinduer",              min:10000, max:25000, krav:"U-verdi ≤ 0,80 W/m²K – dokumentasjon kreves"},
+                {tiltak:"Balansert ventilasjon m/VGJ", min:10000, max:20000, krav:"Varmegjenvinner ≥ 80 %, SFP ≤ 1,5"},
+                {tiltak:"Solcelleanlegg",              min:20000, max:35000, krav:"Min. 3 kWp installert effekt"},
+                {tiltak:"Tetthetsforbedring",          min:5000,  max:10000, krav:"Verifisert med blower door trykktest"},
+              ].map(x=>(
+                <div key={x.tiltak} style={{borderRadius:10,padding:"11px 13px",background:C.section}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+                    <div style={{fontWeight:700,fontSize:"0.83rem",color:C.navyDark}}>{x.tiltak}</div>
+                    <div style={{fontWeight:800,fontSize:"0.88rem",color:C.green,flexShrink:0}}>{x.min.toLocaleString("no")}–{x.max.toLocaleString("no")} kr</div>
+                  </div>
+                  <div style={{fontSize:"0.71rem",color:C.muted,marginTop:3}}>{x.krav}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Søknadssteg */}
+            <div style={{fontWeight:700,fontSize:"0.9rem",color:C.navyDark,marginBottom:10}}>Slik søker du Enova-støtte – steg for steg</div>
+            {[
+              ["1","Kontroller at du kvalifiserer","Tiltaket må gjelde din primærbolig. Du kan ikke ha startet arbeidet før søknaden er godkjent."],
+              ["2","Innhent pristilbud","Få minst ett skriftlig tilbud fra godkjent installatør eller håndverker som dokumenterer tiltaket."],
+              ["3","Søk på enova.no","Gå til enova.no/privat → velg ditt tiltak → fyll ut søknadsskjemaet. Ta vare på søknadsnummeret."],
+              ["4","Vent på godkjenning","Enova behandler søknaden (typisk 1–4 uker). Ikke start arbeidet før du har fått godkjenning."],
+              ["5","Gjennomfør tiltaket","Bruk godkjent fagperson. Sørg for at all dokumentasjon (faktura, tekniske data) er i orden."],
+              ["6","Send sluttdokumentasjon","Last opp faktura og teknisk dokumentasjon på enova.no innen fristen. Støtten utbetales til konto."],
+            ].map(([nr,tittel,tekst])=>(
+              <div key={nr} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:12}}>
+                <div style={{width:24,height:24,borderRadius:"50%",background:C.navy,color:C.white,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.72rem",fontWeight:800,flexShrink:0}}>{nr}</div>
+                <div>
+                  <div style={{fontWeight:700,fontSize:"0.83rem",color:C.navyDark,marginBottom:2}}>{tittel}</div>
+                  <div style={{fontSize:"0.76rem",color:C.muted,lineHeight:1.55}}>{tekst}</div>
+                </div>
+              </div>
+            ))}
+
+            {/* FAQ */}
+            <div style={{fontWeight:700,fontSize:"0.9rem",color:C.navyDark,margin:"16px 0 10px"}}>Vanlige spørsmål om Enova-støtte</div>
+            {[
+              ["Kan jeg kombinere flere tiltak i én søknad?","Ja, du kan søke om støtte til flere tiltak samtidig. Dette er faktisk anbefalt – det er mer effektivt og du slipper flere søknadsprosesser."],
+              ["Hva skjer om jeg starter arbeidet før godkjenning?","Du mister retten til støtte. Enova er tydelige på at arbeidet ikke kan starte før søknaden er godkjent."],
+              ["Må jeg bruke godkjent fagperson?","For de fleste tiltak (varmepumpe, ventilasjon, solceller) ja. For enklere tiltak som tetting kan du gjøre det selv, men dokumentasjon kreves."],
+              ["Når får jeg pengene?","Normalt 4–8 uker etter at sluttdokumentasjonen er godkjent."],
+            ].map(([sp,sv])=>(
+              <div key={sp} style={{border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 14px",marginBottom:8}}>
+                <div style={{fontWeight:700,fontSize:"0.81rem",color:C.navyDark,marginBottom:4}}>{sp}</div>
+                <div style={{fontSize:"0.76rem",color:C.muted,lineHeight:1.55}}>{sv}</div>
+              </div>
+            ))}
+
+            <a href="https://www.enova.no/privat/alle-energitiltak/" target="_blank" rel="noopener noreferrer"
+              style={{display:"block",marginTop:14,textAlign:"center",background:`linear-gradient(135deg,${C.green},${C.greenLight})`,color:C.white,borderRadius:10,padding:"12px",fontWeight:700,fontSize:"0.88rem",textDecoration:"none"}}>
+              Søk Enova-støtte på enova.no →
+            </a>
+          </div>
+        )}
+
+        {/* TAB 3 – Lover & regler */}
         {fane === "lover" && (
           <div>
-            <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:10}}>Regelverk & standarder</div>
-            <div style={{display:"grid",gap:12}}>
+            <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:12}}>Lover & regler</div>
+
+            <div style={{display:"grid",gap:12,marginBottom:18}}>
               {[
-                { tag:"TEK17", tittel:"Teknisk forskrift 2017 (TEK17)", tekst:"Gjeldende byggeforskrift i Norge. Stiller krav til U-verdier (vegg ≤ 0,18, tak ≤ 0,13 W/m²K), lufttetthet (n50 ≤ 0,6/h) og primærenergibehov for nye bygg.", farge:C.navy },
-                { tag:"EPBD 2024", tittel:"EU-direktiv 2024/1275 (EPBD recast)", tekst:"Europaparlamentets reviderte energidirektiv krever at alle boliger oppnår minimum energimerke E innen 2030 og merke D innen 2033. nZEB-standard (A/B) kreves for nye bygg fra 2021.", farge:"#6d28d9" },
-                { tag:"Energimerkeforskriften", tittel:"Energimerkeforskriften (FOR-2009-12-18-1665)", tekst:"Norsk forskrift som pålegger selgere å fremlegge gyldig energiattest ved salg og utleie. Offisielt merke utstedes kun av godkjent energirådgiver via Enovas portal.", farge:C.green },
-                { tag:"NS-EN ISO 52000", tittel:"NS-EN ISO 52000 – Energiytelse i bygninger", tekst:"Europeisk standard som definerer beregningsmetodikk for levert energi, primærenergi og energimerking. BoligEffekt benytter forenklet beregning iht. denne standarden.", farge:C.gold },
+                {tag:"TEK17",farge:C.navy,tittel:"Teknisk forskrift 2017 (TEK17)",tekst:"Gjeldende byggeforskrift i Norge. Stiller krav til U-verdier (vegg ≤ 0,18, tak ≤ 0,13 W/m²K), lufttetthet (n50 ≤ 0,6/h) og primærenergibehov ≤ 120 kWh/m²/år for nye bygg. Gjelder for nybygg og større rehabiliteringsprosjekter.",lenke:"https://www.dibk.no/regelverk/byggteknisk-forskrift-tek17/"},
+                {tag:"EPBD 2024",farge:"#6d28d9",tittel:"EU-direktiv 2024/1275 (EPBD recast)",tekst:"Europaparlamentets reviderte energidirektiv pålegger alle EU/EØS-land å sikre at eksisterende boliger oppgraderes. Boliger i verst presterende 15 % (typisk merke F og G) skal oppnå merke E innen 2030 og D innen 2033. For norske boliger betyr dette konkrete oppgraderingskrav. nZEB-standard (A/B) kreves for nye bygg.",lenke:"https://www.regjeringen.no/no/tema/energi/energieffektivisering/id2340647/"},
+                {tag:"Energimerkeforskriften",farge:C.green,tittel:"Energimerkeforskriften (FOR-2009-12-18-1665)",tekst:"Norsk forskrift som pålegger selgere og utleiere å fremlegge gyldig energiattest. Offisielt merke utstedes av godkjent energirådgiver via NVEs/Enovas portal og er gyldig i 10 år. Manglende energiattest ved salg kan gi kjøper krav på prisavslag.",lenke:"https://lovdata.no/dokument/SF/forskrift/2009-12-18-1665"},
+                {tag:"NS-EN ISO 52000",farge:C.gold,tittel:"NS-EN ISO 52000 – Energiytelse i bygninger",tekst:"Europeisk standard som definerer beregningsmetodikk for levert energi, primærenergi og energimerking av bygninger. BoligEffekt bruker en forenklet beregning basert på denne standarden kombinert med norske TEK-historikkdata og klimakorreksjoner.",lenke:"https://www.standard.no"},
               ].map(x=>(
                 <div key={x.tag} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",borderLeft:`4px solid ${x.farge}`}}>
                   <span style={{fontSize:"0.68rem",fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:x.farge}}>{x.tag}</span>
-                  <div style={{fontWeight:700,fontSize:"0.88rem",color:C.navyDark,margin:"4px 0 5px"}}>{x.tittel}</div>
-                  <div style={{fontSize:"0.78rem",color:C.muted,lineHeight:1.55}}>{x.tekst}</div>
+                  <div style={{fontWeight:700,fontSize:"0.86rem",color:C.navyDark,margin:"4px 0 5px"}}>{x.tittel}</div>
+                  <div style={{fontSize:"0.77rem",color:C.muted,lineHeight:1.6,marginBottom:8}}>{x.tekst}</div>
+                  <a href={x.lenke} target="_blank" rel="noopener noreferrer" style={{fontSize:"0.72rem",color:C.navy,fontWeight:700,textDecoration:"none"}}>Les mer →</a>
                 </div>
+              ))}
+            </div>
+
+            {/* Tidslinje */}
+            <div style={{fontWeight:700,fontSize:"0.9rem",color:C.navyDark,marginBottom:12}}>Tidslinje: krav som gjelder deg</div>
+            {[
+              {ar:"2021",farge:C.green,tekst:"nZEB-krav for alle nye bygg i Norge. Nye boliger skal ha primærenergi under 95 kWh/m²/år."},
+              {ar:"2025",farge:C.gold,tekst:"EU-landene skal ha nasjonale planer for oppgradering av bygningsmasse. Energirådgivning blir mer tilgjengelig."},
+              {ar:"2030",farge:"#f7941d",tekst:"Alle boliger i verst presterende 15 % (merke F/G) skal nå minimum energimerke E. Boliger bygget før 1980 er mest utsatt."},
+              {ar:"2033",farge:"#ed1c24",tekst:"Skjerpet krav: minimum energimerke D. Boliger fra 1950–1970 uten etterisolering vil typisk ikke oppfylle dette uten tiltak."},
+              {ar:"2050",farge:C.navyDark,tekst:"Målet er klimanøytral bygningsmasse i hele EU/EØS. nZEB-standard (A/B-merke) bør være normen for alle boliger."},
+            ].map(x=>(
+              <div key={x.ar} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:12}}>
+                <div style={{background:x.farge,color:"#fff",borderRadius:8,padding:"4px 8px",fontSize:"0.72rem",fontWeight:800,flexShrink:0,minWidth:40,textAlign:"center"}}>{x.ar}</div>
+                <div style={{fontSize:"0.77rem",color:C.muted,lineHeight:1.55,paddingTop:2}}>{x.tekst}</div>
+              </div>
+            ))}
+
+            <div style={{marginTop:14,background:C.section,borderRadius:10,padding:"11px 14px"}}>
+              <div style={{fontWeight:700,fontSize:"0.8rem",color:C.navyDark,marginBottom:6}}>Offisielle kilder</div>
+              {[
+                ["DIBK.no – Direktoratet for byggkvalitet","https://www.dibk.no"],
+                ["Lovdata – Energimerkeforskriften","https://lovdata.no/dokument/SF/forskrift/2009-12-18-1665"],
+                ["Regjeringen.no – Energieffektivisering","https://www.regjeringen.no/no/tema/energi/energieffektivisering/id2340647/"],
+              ].map(([lbl,href])=>(
+                <a key={lbl} href={href} target="_blank" rel="noopener noreferrer"
+                  style={{display:"block",fontSize:"0.75rem",color:C.navy,fontWeight:600,textDecoration:"none",marginBottom:4}}>
+                  {lbl} →
+                </a>
               ))}
             </div>
           </div>
         )}
 
-        {fane === "enova" && (
+        {/* TAB 4 – Nyheter */}
+        {fane === "nyheter" && (
           <div>
-            <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:4}}>Enova-støtte 2024/2025</div>
-            <div style={{...S.sub,marginBottom:14}}>Støttebeløp er veiledende. Søk via enova.no.</div>
-            <div style={{display:"grid",gap:8}}>
-              {[
-                { tiltak:"Luft/luft-varmepumpe",        min:7000,  max:11000, notat:"Per pumpe, krav til COP ≥ 3,5" },
-                { tiltak:"Luft/vann-varmepumpe",         min:20000, max:35000, notat:"Krever vannbåren distribusjon" },
-                { tiltak:"Etterisolering loft/tak",      min:5000,  max:15000, notat:"Min. 25 cm total isolasjonstykkelse" },
-                { tiltak:"Etterisolering yttervegger",   min:15000, max:30000, notat:"Kombineres gjerne med fasaderehab" },
-                { tiltak:"3-lags vinduer",               min:10000, max:25000, notat:"U-verdi ≤ 0,80 W/m²K" },
-                { tiltak:"Balansert ventilasjon m/VGJ",  min:10000, max:20000, notat:"Varmegjenvinner ≥ 80 %" },
-                { tiltak:"Solcelleanlegg",               min:20000, max:35000, notat:"Min. 3 kWp installert effekt" },
-                { tiltak:"Tetthetsforbedring",           min:5000,  max:10000, notat:"Verifisert med trykktest" },
-              ].map(x=>(
-                <div key={x.tiltak} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 13px",background:C.section,borderRadius:10,gap:12}}>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:"0.83rem",color:C.navyDark}}>{x.tiltak}</div>
-                    <div style={{fontSize:"0.72rem",color:C.muted,marginTop:1}}>{x.notat}</div>
-                  </div>
-                  <div style={{textAlign:"right",flexShrink:0}}>
-                    <div style={{fontWeight:800,fontSize:"0.88rem",color:C.green}}>{x.min.toLocaleString("no")}–{x.max.toLocaleString("no")} kr</div>
-                  </div>
-                </div>
-              ))}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <div>
+                <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark}}>Siste nyheter</div>
+                <div style={{fontSize:"0.76rem",color:C.muted,marginTop:2}}>Energimerking, Enova og boligoppgradering</div>
+              </div>
+              <button
+                onClick={()=>hentNyheter(true)}
+                disabled={nyLaster}
+                style={{...S.btnG,fontSize:"0.75rem",opacity:nyLaster?0.6:1}}
+              >
+                {nyLaster ? "Laster…" : "Oppdater nyheter"}
+              </button>
             </div>
-            <div style={{marginTop:12,fontSize:"0.72rem",color:"#bbb",lineHeight:1.6}}>Kilde: Enova.no · Beløp kan endres. Søk alltid før du bestiller håndverker.</div>
-          </div>
-        )}
 
-        {fane === "faar" && (
-          <div>
-            <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:4}}>Hva er inkludert i rapporten?</div>
-            <div style={{...S.sub,marginBottom:16}}>Energirapport fra 199 kr, Oppgraderingsplan 399 kr – leveres øyeblikkelig på e-post som PDF.</div>
-            <div style={{display:"grid",gap:10}}>
-              {[
-                { ikon:"📊", tittel:"Komplett tiltaksplan", tekst:"Alle relevante energitiltak for akkurat din bolig, rangert etter tilbakebetalingstid. Du ser kostnad, besparelse og Enova-støtte for hvert enkelt tiltak." },
-                { ikon:"💰", tittel:"Enova-støtteoversikt med beløp", tekst:"Hvilke Enova-program du kan søke, eksakte støttebeløp og hva som kreves for å kvalifisere. Spar tid på å finne frem selv." },
-                { ikon:"📉", tittel:"Estimert årsbesparelse", tekst:"Beregnet strømsparing i kroner per år for hvert tiltak, basert på din faktiske bolig, klimasone og nåværende strømpris." },
-                { ikon:"🇪🇺", tittel:"EU EPBD 2024-status", tekst:"Sjekk om boligen din oppfyller kravene for 2030 (merke E) og 2033 (merke D). Viktig informasjon ved salg eller refinansiering." },
-                { ikon:"🔬", tittel:"Tekniske beregningsdata", tekst:"Full transparens i beregningen: U-verdier, graddagstall, COP-faktorer, primærenergi og levert energi etter NS-EN ISO 52000." },
-                { ikon:"📄", tittel:"PDF-rapport på e-post", tekst:"Profesjonelt formatert PDF som du kan dele med håndverkere for pristilbud, bank for grønne boliglån, eller eiendomsmegler ved salg." },
-              ].map(x=>(
-                <div key={x.tittel} style={{display:"flex",gap:12,alignItems:"flex-start",padding:"12px 14px",background:C.section,borderRadius:12}}>
-                  <span style={{fontSize:"1.3rem",flexShrink:0}}>{x.ikon}</span>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:"0.85rem",color:C.navyDark,marginBottom:3}}>{x.tittel}</div>
-                    <div style={{fontSize:"0.78rem",color:C.muted,lineHeight:1.55}}>{x.tekst}</div>
+            {nyLaster && (
+              <div style={{textAlign:"center",padding:"32px 0",color:C.muted,fontSize:"0.85rem"}}>
+                <div style={{fontSize:"1.5rem",marginBottom:8}}>⏳</div>
+                Henter siste nyheter…
+              </div>
+            )}
+
+            {nyFeil && !nyLaster && (
+              <div style={{background:"#fff3f3",border:"1px solid #fca5a5",borderRadius:12,padding:"16px 18px",textAlign:"center"}}>
+                <div style={{fontSize:"1.3rem",marginBottom:6}}>😕</div>
+                <div style={{fontWeight:700,color:"#dc2626",fontSize:"0.85rem",marginBottom:4}}>Kunne ikke hente nyheter akkurat nå</div>
+                <div style={{fontSize:"0.77rem",color:C.muted}}>Sjekk nettforbindelsen og prøv igjen.</div>
+              </div>
+            )}
+
+            {nyheter && !nyLaster && (
+              <div style={{display:"grid",gap:12}}>
+                {nyheter.map((n, i) => (
+                  <div key={i} style={{border:`1px solid ${C.border}`,borderRadius:14,padding:"14px 16px",background:C.white}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:6}}>
+                      <div style={{fontWeight:700,fontSize:"0.88rem",color:C.navyDark,lineHeight:1.4}}>{n.tittel}</div>
+                      <span style={{background:C.section,borderRadius:100,padding:"3px 9px",fontSize:"0.67rem",fontWeight:700,color:C.muted,whiteSpace:"nowrap",flexShrink:0}}>{n.dato}</span>
+                    </div>
+                    <div style={{fontSize:"0.78rem",color:C.muted,lineHeight:1.6,marginBottom:8}}>{n.sammendrag}</div>
+                    <div style={{fontSize:"0.7rem",color:C.green,fontWeight:700}}>{n.kilde}</div>
                   </div>
-                </div>
-              ))}
-            </div>
-            <div style={{marginTop:14,background:`${C.green}12`,border:`1px solid ${C.green}30`,borderRadius:10,padding:"12px 14px",fontSize:"0.8rem",color:C.navyDark,lineHeight:1.6}}>
-              ✅ Engangskjøp · Ingen abonnement · Betaling via Stripe · Rapport på e-post umiddelbart
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// AI CHATBOT
+// ─────────────────────────────────────────────
+function Chatbot() {
+  const [aapen, setAapen]       = useState(false);
+  const [historikk, setHistorikk] = useState([]);
+  const [melding, setMelding]   = useState("");
+  const [laster, setLaster]     = useState(false);
+  const msgsRef = React.useRef(null);
+
+  useEffect(() => {
+    if (msgsRef.current) msgsRef.current.scrollTop = msgsRef.current.scrollHeight;
+  }, [historikk, laster]);
+
+  async function send() {
+    const tekst = melding.trim();
+    if (!tekst || laster) return;
+    const nyHistorikk = [...historikk, { rolle:"user", innhold: tekst }];
+    setHistorikk(nyHistorikk);
+    setMelding("");
+    setLaster(true);
+    try {
+      const res  = await fetch(`${BACKEND}/api/chat`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ melding: tekst, historikk }),
+      });
+      const data = await res.json();
+      setHistorikk([...nyHistorikk, { rolle:"assistant", innhold: data.svar || "Beklager, prøv igjen." }]);
+    } catch (_) {
+      setHistorikk([...nyHistorikk, { rolle:"assistant", innhold:"Beklager, jeg kunne ikke svare akkurat nå. Sjekk nettforbindelsen og prøv igjen." }]);
+    }
+    setLaster(false);
+  }
+
+  return (
+    <div style={{position:"fixed",bottom:24,right:20,zIndex:1000,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10}}>
+      {aapen && (
+        <div style={{width:310,height:420,background:C.white,borderRadius:18,boxShadow:"0 12px 48px rgba(27,58,92,0.18)",border:`1px solid ${C.border}`,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+          {/* Header */}
+          <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <div style={{color:C.white,fontWeight:700,fontSize:"0.9rem"}}>BoligEffekt Assistent</div>
+              <div style={{color:"rgba(255,255,255,0.55)",fontSize:"0.72rem"}}>Energirådgiver – svar på norsk</div>
+            </div>
+            <button onClick={()=>setAapen(false)} style={{background:"rgba(255,255,255,0.15)",border:"none",color:C.white,borderRadius:8,width:28,height:28,cursor:"pointer",fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+          </div>
+
+          {/* Meldinger */}
+          <div ref={msgsRef} style={{flex:1,overflowY:"auto",padding:"12px 12px 4px",display:"flex",flexDirection:"column",gap:8}}>
+            {historikk.length === 0 && (
+              <div style={{textAlign:"center",padding:"16px 8px",color:C.muted,fontSize:"0.78rem",lineHeight:1.6}}>
+                <div style={{fontSize:"1.5rem",marginBottom:6}}>💬</div>
+                Spør meg om energimerking, Enova-støtte, TEK17 eller EPBD 2024.
+              </div>
+            )}
+            {historikk.map((h, i) => (
+              <div key={i} style={{display:"flex",justifyContent:h.rolle==="user"?"flex-end":"flex-start"}}>
+                <div style={{
+                  maxWidth:"82%", padding:"9px 12px", borderRadius:h.rolle==="user"?"14px 14px 4px 14px":"14px 14px 14px 4px",
+                  background:h.rolle==="user"?`linear-gradient(135deg,${C.navy},${C.navyMid})`:C.section,
+                  color:h.rolle==="user"?C.white:C.navyDark,
+                  fontSize:"0.8rem", lineHeight:1.55,
+                }}>
+                  {h.innhold}
+                </div>
+              </div>
+            ))}
+            {laster && (
+              <div style={{display:"flex",justifyContent:"flex-start"}}>
+                <div style={{padding:"9px 14px",borderRadius:"14px 14px 14px 4px",background:C.section,fontSize:"0.8rem",color:C.muted,display:"flex",gap:4,alignItems:"center"}}>
+                  <span style={{animation:"pulse 1s infinite"}}>●</span>
+                  <span style={{animationDelay:"0.2s",animation:"pulse 1s 0.2s infinite"}}>●</span>
+                  <span style={{animationDelay:"0.4s",animation:"pulse 1s 0.4s infinite"}}>●</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input */}
+          <div style={{padding:"10px 10px 12px",borderTop:`1px solid ${C.section}`,display:"flex",gap:7}}>
+            <input
+              style={{flex:1,padding:"9px 12px",borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:"0.82rem",color:C.navyDark,background:"#fafafa",outline:"none"}}
+              placeholder="Skriv spørsmål…"
+              value={melding}
+              onChange={e=>setMelding(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&send()}
+              disabled={laster}
+            />
+            <button
+              onClick={send}
+              disabled={laster||!melding.trim()}
+              style={{background:`linear-gradient(135deg,${C.green},${C.greenLight})`,border:"none",color:C.white,borderRadius:10,width:38,cursor:laster||!melding.trim()?"not-allowed":"pointer",opacity:laster||!melding.trim()?0.5:1,fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center"}}
+            >→</button>
+          </div>
+        </div>
+      )}
+
+      {/* Boble-knapp */}
+      <button
+        onClick={()=>setAapen(!aapen)}
+        style={{width:52,height:52,borderRadius:"50%",background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,border:"none",color:C.white,fontSize:"1.4rem",cursor:"pointer",boxShadow:"0 6px 20px rgba(27,58,92,0.28)",display:"flex",alignItems:"center",justifyContent:"center",transition:"transform .15s"}}
+        onMouseEnter={e=>e.currentTarget.style.transform="scale(1.08)"}
+        onMouseLeave={e=>e.currentTarget.style.transform=""}
+        title="BoligEffekt Assistent"
+      >
+        {aapen ? "×" : "💬"}
+      </button>
     </div>
   );
 }
@@ -901,99 +1145,108 @@ export default function App() {
 
   // Resultat-skjerm
   if (skjerm === "resultat" && resultat) {
-    if (betalt) return <FullRapport resultat={resultat} epost={epost} pdfSendt={pdfSendt} pakke={pakke} onNullstill={nullstill}/>;
-    return <Betalingsmur resultat={resultat} input={input} onBetalt={(e, p) => { setEpost(e); setPakke(p); setBetalt(true); }}/>;
+    if (betalt) return <><FullRapport resultat={resultat} epost={epost} pdfSendt={pdfSendt} pakke={pakke} onNullstill={nullstill}/><Chatbot/></>;
+    return <><Betalingsmur resultat={resultat} input={input} onBetalt={(e, p) => { setEpost(e); setPakke(p); setBetalt(true); }}/><Chatbot/></>;
   }
 
   // Avansert skjema
   if (skjerm === "avansert") return (
-    <div style={S.app}>
-      <Header onBack={nullstill}/>
-      <div style={S.wrap}>
-        <div style={{textAlign:"center",marginBottom:24}}>
-          <div style={S.tag}>Avansert analyse</div>
-          <h1 style={S.h1}>Fyll inn boligdata</h1>
-        </div>
-        <div style={S.card}>
-          {[{lbl:"Bruksareal BRA (m²)",key:"areal",type:"number",ph:"f.eks. 120"},{lbl:"Byggeår",key:"byggeår",type:"number",ph:"f.eks. 1978"}].map(f=>(
-            <div key={f.key} style={{marginBottom:16}}>
-              <label style={S.lbl}>{f.lbl}</label>
-              <input style={S.inp} type={f.type} placeholder={f.ph} value={avForm[f.key]} onChange={e=>setAvForm({...avForm,[f.key]:e.target.value})}/>
-            </div>
-          ))}
-          {[
-            {lbl:"Boligtype",key:"boligtype",valg:BOLIGTYPER.map(b=>[b.id,b.label])},
-            {lbl:"Klimasone",key:"klimasone",valg:KLIMASONER.map(k=>[k.id,k.label])},
-            {lbl:"Oppvarming",key:"oppvarming",valg:Object.entries(OPPVARMING_DATA).map(([k,v])=>[k,v.label])},
-            {lbl:"Vinduer",key:"vinduer_type",valg:[["enkelt","Enkeltglass / eldre"],["dobbel","2-lags isolerglass"],["trippel","3-lags / nye"]]},
-            {lbl:"Isoleringsnivå",key:"isolering_nivå",valg:[["dårlig","Dårlig – kald og trekkfull"],["normal","Normal"],["oppgradert","Godt isolert"]]},
-            {lbl:"Antall etasjer",key:"antall_etasjer",valg:[["1","1 etasje"],["2","2 etasjer"],["3","3+ etasjer"]]},
-          ].map(f=>(
-            <div key={f.key} style={{marginBottom:16}}>
-              <label style={S.lbl}>{f.lbl}</label>
-              <select style={S.sel} value={avForm[f.key]} onChange={e=>setAvForm({...avForm,[f.key]:e.target.value})}>
-                {f.valg.map(([v,l])=><option key={v} value={v}>{l}</option>)}
-              </select>
-            </div>
-          ))}
-          <button style={S.btnP} onClick={()=>lagOgVis({areal:Number(avForm.areal)||120,byggeår:Number(avForm.byggeår)||1978,boligtype:avForm.boligtype,klimasone:avForm.klimasone,oppvarming:avForm.oppvarming,vinduer_type:avForm.vinduer_type,isolering_nivå:avForm.isolering_nivå,antall_etasjer:Number(avForm.antall_etasjer)||2})}>
-            Beregn energimerke →
-          </button>
+    <>
+      <div style={S.app}>
+        <Header onBack={nullstill}/>
+        <div style={S.wrap}>
+          <div style={{textAlign:"center",marginBottom:24}}>
+            <div style={S.tag}>Avansert analyse</div>
+            <h1 style={S.h1}>Fyll inn boligdata</h1>
+          </div>
+          <div style={S.card}>
+            {[{lbl:"Bruksareal BRA (m²)",key:"areal",type:"number",ph:"f.eks. 120"},{lbl:"Byggeår",key:"byggeår",type:"number",ph:"f.eks. 1978"}].map(f=>(
+              <div key={f.key} style={{marginBottom:16}}>
+                <label style={S.lbl}>{f.lbl}</label>
+                <input style={S.inp} type={f.type} placeholder={f.ph} value={avForm[f.key]} onChange={e=>setAvForm({...avForm,[f.key]:e.target.value})}/>
+              </div>
+            ))}
+            {[
+              {lbl:"Boligtype",key:"boligtype",valg:BOLIGTYPER.map(b=>[b.id,b.label])},
+              {lbl:"Klimasone",key:"klimasone",valg:KLIMASONER.map(k=>[k.id,k.label])},
+              {lbl:"Oppvarming",key:"oppvarming",valg:Object.entries(OPPVARMING_DATA).map(([k,v])=>[k,v.label])},
+              {lbl:"Vinduer",key:"vinduer_type",valg:[["enkelt","Enkeltglass / eldre"],["dobbel","2-lags isolerglass"],["trippel","3-lags / nye"]]},
+              {lbl:"Isoleringsnivå",key:"isolering_nivå",valg:[["dårlig","Dårlig – kald og trekkfull"],["normal","Normal"],["oppgradert","Godt isolert"]]},
+              {lbl:"Antall etasjer",key:"antall_etasjer",valg:[["1","1 etasje"],["2","2 etasjer"],["3","3+ etasjer"]]},
+            ].map(f=>(
+              <div key={f.key} style={{marginBottom:16}}>
+                <label style={S.lbl}>{f.lbl}</label>
+                <select style={S.sel} value={avForm[f.key]} onChange={e=>setAvForm({...avForm,[f.key]:e.target.value})}>
+                  {f.valg.map(([v,l])=><option key={v} value={v}>{l}</option>)}
+                </select>
+              </div>
+            ))}
+            <button style={S.btnP} onClick={()=>lagOgVis({areal:Number(avForm.areal)||120,byggeår:Number(avForm.byggeår)||1978,boligtype:avForm.boligtype,klimasone:avForm.klimasone,oppvarming:avForm.oppvarming,vinduer_type:avForm.vinduer_type,isolering_nivå:avForm.isolering_nivå,antall_etasjer:Number(avForm.antall_etasjer)||2})}>
+              Beregn energimerke →
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+      <Chatbot/>
+    </>
   );
 
   // Enkel steg-for-steg
   if (skjerm === "enkel") {
     const s = STEG[steg];
     return (
-      <div style={S.app}>
-        <Header onBack={()=>steg===0?nullstill():setSteg(steg-1)}/>
-        <div style={S.wrap}>
-          <div style={S.prog}><div style={S.fill((steg/STEG.length)*100)}/></div>
-          <div style={{textAlign:"center",marginBottom:28}}>
-            <div style={S.tag}>Spørsmål {steg+1} av {STEG.length}</div>
-            <h2 style={{fontFamily:"Georgia,serif",fontWeight:800,fontSize:"clamp(1.3rem,4vw,1.8rem)",color:C.navyDark,marginBottom:8}}>{s.tittel}</h2>
-            <p style={S.sub}>{s.hint}</p>
-          </div>
-          <div style={S.grid}>
-            {s.valg.map(v=>(
-              <button key={String(v.verdi)} style={S.btn(svar[s.id]===v.verdi)} onClick={()=>velg(v.verdi)}
-                onMouseEnter={e=>{if(svar[s.id]!==v.verdi){e.currentTarget.style.borderColor=C.navy;e.currentTarget.style.transform="translateY(-2px)";}}}
-                onMouseLeave={e=>{if(svar[s.id]!==v.verdi){e.currentTarget.style.borderColor=C.border;e.currentTarget.style.transform="";}}}>
-                <span style={S.ikon}>{v.ikon}</span>{v.label}
-              </button>
-            ))}
+      <>
+        <div style={S.app}>
+          <Header onBack={()=>steg===0?nullstill():setSteg(steg-1)}/>
+          <div style={S.wrap}>
+            <div style={S.prog}><div style={S.fill((steg/STEG.length)*100)}/></div>
+            <div style={{textAlign:"center",marginBottom:28}}>
+              <div style={S.tag}>Spørsmål {steg+1} av {STEG.length}</div>
+              <h2 style={{fontFamily:"Georgia,serif",fontWeight:800,fontSize:"clamp(1.3rem,4vw,1.8rem)",color:C.navyDark,marginBottom:8}}>{s.tittel}</h2>
+              <p style={S.sub}>{s.hint}</p>
+            </div>
+            <div style={S.grid}>
+              {s.valg.map(v=>(
+                <button key={String(v.verdi)} style={S.btn(svar[s.id]===v.verdi)} onClick={()=>velg(v.verdi)}
+                  onMouseEnter={e=>{if(svar[s.id]!==v.verdi){e.currentTarget.style.borderColor=C.navy;e.currentTarget.style.transform="translateY(-2px)";}}}
+                  onMouseLeave={e=>{if(svar[s.id]!==v.verdi){e.currentTarget.style.borderColor=C.border;e.currentTarget.style.transform="";}}}>
+                  <span style={S.ikon}>{v.ikon}</span>{v.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+        <Chatbot/>
+      </>
     );
   }
 
   // Startskjerm
   return (
-    <div style={S.app}>
-      <Header/>
-      <div style={S.wrap}>
-        <div style={{textAlign:"center",marginBottom:36,paddingTop:16}}>
-          <div style={S.tag}>Gratis energianalyse</div>
-          <h1 style={S.h1}>Hva er energimerket<br/>på din bolig?</h1>
-          <p style={{...S.sub,maxWidth:420,margin:"0 auto"}}>Finn energimerke A–G, se hvilke tiltak som lønner seg og where mye Enova-støtte du kan få.</p>
-        </div>
-        <div style={{display:"grid",gap:14}}>
-          <div style={{...S.card,cursor:"pointer",textAlign:"center"}} onClick={()=>setSkjerm("enkel")}
-            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 16px 48px rgba(27,58,92,0.14)";}}
-            onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>
-            <div style={{fontSize:"2.2rem",marginBottom:10}}>🏠</div>
-            <div style={{fontWeight:800,fontSize:"1.1rem",color:C.navyDark,marginBottom:5}}>Enkel analyse</div>
-            <div style={{...S.sub,marginBottom:16}}>6 spørsmål · 2 minutter · Ingen fagkunnskap nødvendig</div>
-            <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,color:C.white,borderRadius:10,padding:"12px 28px",fontWeight:700,fontSize:"0.95rem",display:"inline-block"}}>Start her →</div>
+    <>
+      <div style={S.app}>
+        <Header/>
+        <div style={S.wrap}>
+          <div style={{textAlign:"center",marginBottom:36,paddingTop:16}}>
+            <div style={S.tag}>Gratis energianalyse</div>
+            <h1 style={S.h1}>Hva er energimerket<br/>på din bolig?</h1>
+            <p style={{...S.sub,maxWidth:420,margin:"0 auto"}}>Finn energimerke A–G, se hvilke tiltak som lønner seg og hvor mye Enova-støtte du kan få.</p>
           </div>
+          <div style={{display:"grid",gap:14}}>
+            <div style={{...S.card,cursor:"pointer",textAlign:"center"}} onClick={()=>setSkjerm("enkel")}
+              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 16px 48px rgba(27,58,92,0.14)";}}
+              onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>
+              <div style={{fontSize:"2.2rem",marginBottom:10}}>🏠</div>
+              <div style={{fontWeight:800,fontSize:"1.1rem",color:C.navyDark,marginBottom:5}}>Enkel analyse</div>
+              <div style={{...S.sub,marginBottom:16}}>6 spørsmål · 2 minutter · Ingen fagkunnskap nødvendig</div>
+              <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,color:C.white,borderRadius:10,padding:"12px 28px",fontWeight:700,fontSize:"0.95rem",display:"inline-block"}}>Start her →</div>
+            </div>
+          </div>
+          <KunnskapsHub/>
+          <p style={{textAlign:"center",fontSize:"0.7rem",color:"#bbb",marginTop:20}}>NS-EN ISO 52000 · TEK17 · EU EPBD 2024/1275 · Gratis energimerke-estimat</p>
         </div>
-        <InfoFaner/>
-        <p style={{textAlign:"center",fontSize:"0.7rem",color:"#bbb",marginTop:20}}>NS-EN ISO 52000 · TEK17 · EU EPBD 2024/1275 · Gratis energimerke-estimat</p>
       </div>
-    </div>
+      <Chatbot/>
+    </>
   );
 }
