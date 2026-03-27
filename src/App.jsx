@@ -179,9 +179,6 @@ const S = {
   sel:    { width:"100%", padding:"11px 13px", borderRadius:10, border:`1.5px solid ${C.border}`, fontSize:"0.94rem", color:C.navyDark, background:"#fafafa", outline:"none", boxSizing:"border-box" },
 };
 
-function LogoSvg() {
-  return <svg width="34" height="34" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="14" fill={C.bg}/><path d="M50 12 L82 38 L82 82 Q82 86 78 86 L22 86 Q18 86 18 82 L18 38 Z" fill={C.navy}/><path d="M50 18 L78 42 L78 80 Q78 82 76 82 L24 82 Q22 82 22 80 L22 42 Z" fill="url(#lg)"/><defs><linearGradient id="lg" x1="50" y1="18" x2="50" y2="82" gradientUnits="userSpaceOnUse"><stop stopColor={C.greenLight}/><stop offset="1" stopColor="#1a9444"/></linearGradient></defs><rect x="44" y="22" width="12" height="12" rx="2" fill="white" opacity=".9"/><path d="M54 48 L46 62 L52 62 L46 76 L62 56 L55 56 Z" fill="white"/></svg>;
-}
 function Header({ onBack, onHome }) {
   return (
     <>
