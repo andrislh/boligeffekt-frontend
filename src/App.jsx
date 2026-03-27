@@ -38,7 +38,24 @@ const OPPVARMING_DATA = {
   fjernvarme:    { label: "Fjernvarme",                COP: 1.0,  primær: 0.80, ikon: "🌐" },
   ved_pellets:   { label: "Ved / pellets",             COP: 0.75, primær: 0.60, ikon: "🪵" },
   olje_gass:     { label: "Olje / gass",               COP: 0.90, primær: 1.40, ikon: "⚠️" },
+  gulvvarme_el:  { label: "Elektrisk gulvvarme",       COP: 1.0,  primær: 2.0,  ikon: "🔆" },
+  biokjel:       { label: "Biokjel / pelletsovn",      COP: 0.85, primær: 0.5,  ikon: "🌿" },
 };
+const ENERGIKOST = {
+  direkte_el: 1.15, varmepumpe_ll: 0.38, varmepumpe_lv: 0.33,
+  fjernvarme: 0.85, ved_pellets: 0.72,   olje_gass: 1.44,
+  gulvvarme_el: 1.15, biokjel: 0.65,
+};
+const OPPVARMING_VALG = [
+  { label: "Panelovner / direktevarme", verdi: "direkte_el",    ikon: "🔌" },
+  { label: "Luft/luft-varmepumpe",     verdi: "varmepumpe_ll", ikon: "🌡️" },
+  { label: "Luft/vann-varmepumpe",     verdi: "varmepumpe_lv", ikon: "💧" },
+  { label: "Fjernvarme",               verdi: "fjernvarme",    ikon: "🌐" },
+  { label: "Ved / pellets",            verdi: "ved_pellets",   ikon: "🪵" },
+  { label: "Olje / gass",              verdi: "olje_gass",     ikon: "⚠️" },
+  { label: "Elektrisk gulvvarme",      verdi: "gulvvarme_el",  ikon: "🔆" },
+  { label: "Biokjel / pelletsovn",     verdi: "biokjel",       ikon: "🌿" },
+];
 const ENERGIMERKER = [
   { merke: "A", maks: 95,   farge: "#00a651", tekst: "#fff", epbd: "nZEB-klar" },
   { merke: "B", maks: 120,  farge: "#57b946", tekst: "#fff", epbd: "God standard" },
@@ -64,10 +81,19 @@ const TILTAK = [
 // ─────────────────────────────────────────────
 function beregnEnergi(input) {
   const { areal, byggeår, oppvarming, boligtype, klimasone, isolering_nivå, vinduer_type, antall_etasjer } = input;
-  const bygData  = BYGGEÅR_DATA.find(b => byggeår >= b.fra && byggeår <= b.til) || BYGGEÅR_DATA[0];
-  const klima    = KLIMASONER.find(k => k.id === klimasone) || KLIMASONER[2];
-  const bolig    = BOLIGTYPER.find(b => b.id === boligtype) || BOLIGTYPER[2];
-  const oppvData = OPPVARMING_DATA[oppvarming] || OPPVARMING_DATA.direkte_el;
+  const bygData = BYGGEÅR_DATA.find(b => byggeår >= b.fra && byggeår <= b.til) || BYGGEÅR_DATA[0];
+  const klima   = KLIMASONER.find(k => k.id === klimasone) || KLIMASONER[2];
+  const bolig   = BOLIGTYPER.find(b => b.id === boligtype) || BOLIGTYPER[2];
+  let oppvData, weightedCost;
+  if (Array.isArray(oppvarming)) {
+    const wCOP    = oppvarming.reduce((s, k) => s + (OPPVARMING_DATA[k.kilde]?.COP    || 1.0) * k.andel, 0);
+    const wPrimær = oppvarming.reduce((s, k) => s + (OPPVARMING_DATA[k.kilde]?.primær || 2.0) * k.andel, 0);
+    oppvData     = { label: oppvarming.map(k => OPPVARMING_DATA[k.kilde]?.label || k.kilde).join(" + "), COP: wCOP, primær: wPrimær, ikon: OPPVARMING_DATA[oppvarming[0].kilde]?.ikon || "🏠" };
+    weightedCost = oppvarming.reduce((s, k) => s + (ENERGIKOST[k.kilde] || 1.15) * k.andel, 0);
+  } else {
+    oppvData     = OPPVARMING_DATA[oppvarming] || OPPVARMING_DATA.direkte_el;
+    weightedCost = ENERGIKOST[oppvarming] || 1.15;
+  }
   let u_vegg = bygData.u_vegg, u_tak = bygData.u_tak, lufttetthet = bygData.lufttetthet;
   let u_vindu = vinduer_type === "trippel" ? 0.9 : vinduer_type === "dobbel" ? 1.8 : bygData.u_vindu;
   if (isolering_nivå === "oppgradert") { u_vegg *= 0.75; u_tak *= 0.75; lufttetthet *= 0.75; }
@@ -79,19 +105,25 @@ function beregnEnergi(input) {
   const Q_primær = Math.round(Q_levert * oppvData.primær);
   const merkeObj = ENERGIMERKER.find(e => Q_levert <= e.maks) || ENERGIMERKER[6];
   const merkePot = ENERGIMERKER.find(e => Math.round(Q_levert * 0.55) <= e.maks) || ENERGIMERKER[6];
-  return { kwhPerM2: Q_levert, primærPerM2: Q_primær, totalKwh: Math.round(Q_levert * areal),
+  const totalKwh = Math.round(Q_levert * areal);
+  return { kwhPerM2: Q_levert, primærPerM2: Q_primær, totalKwh, areal,
            merke: merkeObj, merkePotensial: merkePot, bygData, klima, bolig, oppvData,
-           u_vegg, u_tak, u_vindu, lufttetthet, strømkostnad: Math.round(Q_levert * areal * 1.15) };
+           u_vegg, u_tak, u_vindu, lufttetthet, weightedCost,
+           strømkostnad: Math.round(totalKwh * weightedCost) };
 }
 function beregnTiltak(resultat, input) {
   return TILTAK.filter(t => {
-    if (t.krever_ikke.includes(input.oppvarming)) return false;
+    if (Array.isArray(input.oppvarming)) {
+      if (t.krever_ikke.some(k => input.oppvarming.some(o => o.kilde === k))) return false;
+    } else {
+      if (t.krever_ikke.includes(input.oppvarming)) return false;
+    }
     if (!t.passer_for.includes("alle") && !t.passer_for.includes(input.boligtype)) return false;
     if (t.min_areal && input.areal < t.min_areal) return false;
     if (t.id === "isolering_vegger" && resultat.kwhPerM2 < 130) return false;
     return true;
   }).map(t => {
-    const besparelse_kr = Math.round(resultat.totalKwh * t.kWh_pct * 1.15);
+    const besparelse_kr = Math.round(resultat.totalKwh * t.kWh_pct * resultat.weightedCost);
     const støtte_snitt  = Math.round((t.støtte_min + t.støtte_max) / 2);
     const kostnad_snitt = Math.round((t.kostnad_min + t.kostnad_max) / 2);
     const netto         = kostnad_snitt - støtte_snitt;
@@ -116,7 +148,7 @@ const STEG = [
   { id: "areal",        tittel: "Hva er boligarealet?",          hint: "Oppvarmet bruksareal (BRA)",
     valg: [{label:"Under 50 m²",verdi:40,ikon:"📦"},{label:"50–80 m²",verdi:65,ikon:"🏠"},{label:"80–120 m²",verdi:100,ikon:"🏡"},{label:"120–180 m²",verdi:150,ikon:"🏘️"},{label:"180–250 m²",verdi:215,ikon:"🏰"},{label:"Over 250 m²",verdi:300,ikon:"🏯"}] },
   { id: "klimasone",    tittel: "Hvor i Norge bor du?",          hint: "Klimasonen påvirker energibehovet betydelig",    valg: KLIMASONER.map(k => ({ label: k.label.split("(")[0].trim(), verdi: k.id, ikon: "📍" })) },
-  { id: "oppvarming",   tittel: "Hva bruker du til oppvarming?", hint: "Det som dekker mest av varmebehovet",            valg: Object.entries(OPPVARMING_DATA).map(([k,v]) => ({ label: v.label, verdi: k, ikon: v.ikon })) },
+  { id: "oppvarming",   tittel: "Hvordan varmer du opp boligen?", hint: "Velg opptil 3 oppvarmingskilder",              valg: OPPVARMING_VALG },
   { id: "vinduer_type", tittel: "Hva slags vinduer har du?",     hint: "Vinduer er en stor kilde til varmetap",
     valg: [{label:"Enkeltglass / eldre",verdi:"enkelt",ikon:"🥶"},{label:"2-lags isolerglass",verdi:"dobbel",ikon:"🪟"},{label:"3-lags / nye",verdi:"trippel",ikon:"✨"}] },
 ];
@@ -150,12 +182,18 @@ const S = {
 function LogoSvg() {
   return <svg width="34" height="34" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="14" fill={C.bg}/><path d="M50 12 L82 38 L82 82 Q82 86 78 86 L22 86 Q18 86 18 82 L18 38 Z" fill={C.navy}/><path d="M50 18 L78 42 L78 80 Q78 82 76 82 L24 82 Q22 82 22 80 L22 42 Z" fill="url(#lg)"/><defs><linearGradient id="lg" x1="50" y1="18" x2="50" y2="82" gradientUnits="userSpaceOnUse"><stop stopColor={C.greenLight}/><stop offset="1" stopColor="#1a9444"/></linearGradient></defs><rect x="44" y="22" width="12" height="12" rx="2" fill="white" opacity=".9"/><path d="M54 48 L46 62 L52 62 L46 76 L62 56 L55 56 Z" fill="white"/></svg>;
 }
-function Header({ onBack }) {
+function Header({ onBack, onHome }) {
   return (
     <>
       <link rel="preconnect" href="https://fonts.googleapis.com"/>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap"/>
-      <div style={S.header}><LogoSvg/><span style={S.logo}>BoligEffekt</span>{onBack && <button onClick={onBack} style={{...S.btnG,marginLeft:"auto"}}>← Tilbake</button>}</div>
+      <div style={S.header}>
+        <div onClick={onHome} style={{display:"flex",alignItems:"center",gap:12,cursor:onHome?"pointer":"default"}}>
+          <img src="/logo.png" alt="BoligEffekt" style={{height:"38px",width:"38px",objectFit:"contain"}}/>
+          <span style={S.logo}>BoligEffekt</span>
+        </div>
+        {onBack && <button onClick={onBack} style={{...S.btnG,marginLeft:"auto"}}>← Tilbake</button>}
+      </div>
     </>
   );
 }
@@ -170,11 +208,12 @@ function Skala({ merke }) {
 // ─────────────────────────────────────────────
 // BETALINGSMUR
 // ─────────────────────────────────────────────
-function Betalingsmur({ resultat, input, onBetalt }) {
-  const [epost, setEpost]   = useState("");
-  const [pakke, setPakke]   = useState("oppgraderingsplan");
-  const [laster, setLaster] = useState(false);
-  const [feil, setFeil]     = useState("");
+function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
+  const [epost, setEpost]       = useState("");
+  const [pakke, setPakke]       = useState("oppgraderingsplan");
+  const [laster, setLaster]     = useState(false);
+  const [feil, setFeil]         = useState("");
+  const [delKopiert, setDelKopiert] = useState(false);
   const { merke, kwhPerM2, tiltak } = resultat;
   const høy = tiltak.filter(t => t.prioritet === "høy");
 
@@ -221,7 +260,7 @@ function Betalingsmur({ resultat, input, onBetalt }) {
 
   return (
     <div style={S.app}>
-      <Header/>
+      <Header onHome={onNullstill}/>
       <div style={S.wrap}>
         {/* Gratis – energimerke */}
         <div style={S.card}>
@@ -251,10 +290,23 @@ function Betalingsmur({ resultat, input, onBetalt }) {
           </div>
         </div>
 
+        {/* Del resultatet */}
+        <div style={{textAlign:"center",marginBottom:14}}>
+          <button
+            onClick={() => navigator.clipboard.writeText("Sjekk energimerket på din bolig: https://boligeffekt.no").then(() => { setDelKopiert(true); setTimeout(() => setDelKopiert(false), 2000); })}
+            style={{...S.btnG,display:"inline-flex",alignItems:"center",gap:8}}
+          >
+            {delKopiert ? "Lenke kopiert! ✓" : "🔗 Del resultatet"}
+          </button>
+        </div>
+
         {/* Velg pakke */}
         <div style={{marginBottom:4}}>
           <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,textAlign:"center",marginBottom:4}}>Velg din pakke</div>
-          <div style={{fontSize:"0.82rem",color:C.muted,textAlign:"center",marginBottom:14}}>Klikk for å velge, deretter betal</div>
+          <div style={{fontSize:"0.82rem",color:C.muted,textAlign:"center",marginBottom:8}}>Klikk for å velge, deretter betal</div>
+          <div style={{textAlign:"center",background:`${C.gold}18`,borderRadius:10,padding:"9px 14px",fontSize:"0.8rem",fontWeight:600,color:C.gold,marginBottom:14}}>
+            🕐 Enova-støttesatsene for 2025 er bekreftet – søk før budsjettet er brukt opp
+          </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
 
             {/* Pakke 1 – Energirapport */}
@@ -344,7 +396,7 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
   const [leadTlf, setLeadTlf]       = useState("");
   const [leadSendt, setLeadSendt]   = useState(false);
   const [leadLaster, setLeadLaster] = useState(false);
-  const { kwhPerM2, primærPerM2, totalKwh, merke, merkePotensial, strømkostnad, tiltak } = resultat;
+  const { kwhPerM2, primærPerM2, totalKwh, areal, merke, merkePotensial, strømkostnad, tiltak, weightedCost } = resultat;
   const høy = tiltak.filter(t => t.prioritet === "høy");
   const totalStøtte     = høy.reduce((s,t) => s + t.støtte_snitt, 0);
   const totalBesparelse = høy.reduce((s,t) => s + t.besparelse_kr, 0);
@@ -353,7 +405,7 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
 
   return (
     <div style={S.app}>
-      <Header onBack={onNullstill}/>
+      <Header onBack={onNullstill} onHome={onNullstill}/>
       <div style={S.wrap}>
         {/* Suksessbanner */}
         <div style={{background:`${C.green}15`,border:`1px solid ${C.green}30`,borderRadius:14,padding:"14px 18px",marginBottom:16,display:"flex",alignItems:"center",gap:12}}>
@@ -390,11 +442,38 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
           </div>
           <Skala merke={merke}/>
           {merkePotensial.merke !== merke.merke && (
-            <div style={{marginTop:14,background:`${C.green}12`,border:`1px solid ${C.green}35`,borderRadius:10,padding:"11px 14px",fontSize:"0.83rem",color:C.navyDark}}>
-              💡 Med anbefalte tiltak kan boligen nå <strong>energimerke {merkePotensial.merke}</strong>
+            <div style={{marginTop:14,display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:`${C.green}12`,border:`1px solid ${C.green}35`,borderRadius:10,padding:"11px 14px"}}>
+              <span style={{fontWeight:700,fontSize:"0.85rem",color:C.navyDark}}>Din bolig: Merke {merke.merke}</span>
+              <span style={{color:C.green,fontSize:"1.3rem",fontWeight:900}}>→</span>
+              <span style={{fontWeight:700,fontSize:"0.85rem",color:C.green}}>Med tiltak: Merke {merkePotensial.merke}</span>
             </div>
           )}
         </div>
+
+        {/* Kostnad ved å vente */}
+        {kwhPerM2 > 120 && (() => {
+          const ekstraPerÅr = Math.round((kwhPerM2 - 120) * areal * weightedCost);
+          const ekstraPerMåned = Math.round(ekstraPerÅr / 12);
+          const tapt3År = ekstraPerÅr * 3;
+          return (
+            <div style={{background:"#fff8f0",border:`2px solid ${C.gold}50`,borderRadius:16,padding:"20px",marginBottom:16}}>
+              <div style={{fontWeight:800,fontSize:"1.05rem",color:C.navyDark,marginBottom:12}}>💸 Kostnad ved å vente</div>
+              <p style={{fontSize:"0.85rem",color:C.navyDark,lineHeight:1.6,marginBottom:6}}>
+                Sammenlignet med en B-merket bolig bruker din bolig <strong>{ekstraPerMåned.toLocaleString("no")} kr ekstra per måned</strong>
+              </p>
+              <p style={{fontSize:"0.85rem",color:C.navyDark,lineHeight:1.6,marginBottom:6}}>
+                Om du venter 3 år med tiltak taper du totalt <strong>{tapt3År.toLocaleString("no")} kr</strong> i unødvendig strøm
+              </p>
+              <p style={{fontSize:"0.83rem",color:C.muted,lineHeight:1.6,marginBottom:14}}>
+                I tillegg risikerer du høyere håndverkerpriser når EPBD-kravene tvinger alle til å handle samtidig
+              </p>
+              <button onClick={()=>document.getElementById("tiltaksplan-seksjon")?.scrollIntoView({behavior:"smooth"})}
+                style={{background:`linear-gradient(135deg,${C.green},${C.greenLight})`,color:C.white,border:"none",borderRadius:10,padding:"10px 20px",fontWeight:700,fontSize:"0.85rem",cursor:"pointer"}}>
+                Se hva du kan spare →
+              </button>
+            </div>
+          );
+        })()}
 
         {/* Potensial */}
         {høy.length > 0 && (
@@ -420,7 +499,7 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
 
         {/* TILTAKSPLAN */}
         {fane === "tiltak" && (
-          <div style={S.card}>
+          <div id="tiltaksplan-seksjon" style={S.card}>
             <div style={S.h2}>Tiltaksplan</div>
             <div style={{...S.sub,marginBottom:18}}>Sortert etter tilbakebetalingstid</div>
             {visTiltak.map(t=>(
@@ -816,6 +895,8 @@ function KunnskapsHub() {
               ))}
             </div>
 
+            <div style={{textAlign:"center",fontSize:"0.7rem",color:"#bbb",marginBottom:14}}>Sist oppdatert: Januar 2025</div>
+
             {/* Søknadssteg */}
             <div style={{fontWeight:700,fontSize:"0.9rem",color:C.navyDark,marginBottom:10}}>Slik søker du Enova-støtte – steg for steg</div>
             {[
@@ -863,8 +944,8 @@ function KunnskapsHub() {
 
             <div style={{display:"grid",gap:12,marginBottom:18}}>
               {[
-                {tag:"TEK17",farge:C.navy,tittel:"Teknisk forskrift 2017 (TEK17)",tekst:"Gjeldende byggeforskrift i Norge. Stiller krav til U-verdier (vegg ≤ 0,18, tak ≤ 0,13 W/m²K), lufttetthet (n50 ≤ 0,6/h) og primærenergibehov ≤ 120 kWh/m²/år for nye bygg. Gjelder for nybygg og større rehabiliteringsprosjekter.",lenke:"https://www.dibk.no/regelverk/byggteknisk-forskrift-tek17/"},
-                {tag:"EPBD 2024",farge:"#6d28d9",tittel:"EU-direktiv 2024/1275 (EPBD recast)",tekst:"Europaparlamentets reviderte energidirektiv pålegger alle EU/EØS-land å sikre at eksisterende boliger oppgraderes. Boliger i verst presterende 15 % (typisk merke F og G) skal oppnå merke E innen 2030 og D innen 2033. For norske boliger betyr dette konkrete oppgraderingskrav. nZEB-standard (A/B) kreves for nye bygg.",lenke:"https://www.regjeringen.no/no/tema/energi/energieffektivisering/id2340647/"},
+                {tag:"TEK17",farge:C.navy,tittel:"Teknisk forskrift 2017 (TEK17)",tekst:"Gjeldende byggeforskrift i Norge. Stiller krav til U-verdier (vegg ≤ 0,18, tak ≤ 0,13 W/m²K), lufttetthet (n50 ≤ 0,6/h) og primærenergibehov ≤ 120 kWh/m²/år for nye bygg. Gjelder for nybygg og større rehabiliteringsprosjekter.",lenke:"https://lovdata.no/dokument/SF/forskrift/2017-06-19-840"},
+                {tag:"EPBD 2024",farge:"#6d28d9",tittel:"EU-direktiv 2024/1275 (EPBD recast)",tekst:"Europaparlamentets reviderte energidirektiv pålegger alle EU/EØS-land å sikre at eksisterende boliger oppgraderes. Boliger i verst presterende 15 % (typisk merke F og G) skal oppnå merke E innen 2030 og D innen 2033. For norske boliger betyr dette konkrete oppgraderingskrav. nZEB-standard (A/B) kreves for nye bygg.",lenke:"https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32024L1275"},
                 {tag:"Energimerkeforskriften",farge:C.green,tittel:"Energimerkeforskriften (FOR-2009-12-18-1665)",tekst:"Norsk forskrift som pålegger selgere og utleiere å fremlegge gyldig energiattest. Offisielt merke utstedes av godkjent energirådgiver via NVEs/Enovas portal og er gyldig i 10 år. Manglende energiattest ved salg kan gi kjøper krav på prisavslag.",lenke:"https://lovdata.no/dokument/SF/forskrift/2009-12-18-1665"},
                 {tag:"NS-EN ISO 52000",farge:C.gold,tittel:"NS-EN ISO 52000 – Energiytelse i bygninger",tekst:"Europeisk standard som definerer beregningsmetodikk for levert energi, primærenergi og energimerking av bygninger. BoligEffekt bruker en forenklet beregning basert på denne standarden kombinert med norske TEK-historikkdata og klimakorreksjoner.",lenke:"https://www.standard.no"},
               ].map(x=>(
@@ -898,6 +979,9 @@ function KunnskapsHub() {
                 ["DIBK.no – Direktoratet for byggkvalitet","https://www.dibk.no"],
                 ["Lovdata – Energimerkeforskriften","https://lovdata.no/dokument/SF/forskrift/2009-12-18-1665"],
                 ["Regjeringen.no – Energieffektivisering","https://www.regjeringen.no/no/tema/energi/energieffektivisering/id2340647/"],
+                ["NVE – Energimerking av bygg","https://www.nve.no/energibruk-og-effektivisering/energimerking-av-bygg/"],
+                ["Enova – Alle energitiltak","https://www.enova.no/privat/alle-energitiltak/"],
+                ["Husbanken – Grønne lån","https://www.husbanken.no/lan/gronne-lan/"],
               ].map(([lbl,href])=>(
                 <a key={lbl} href={href} target="_blank" rel="noopener noreferrer"
                   style={{display:"block",fontSize:"0.75rem",color:C.navy,fontWeight:600,textDecoration:"none",marginBottom:4}}>
@@ -1072,17 +1156,34 @@ function Chatbot() {
 // ─────────────────────────────────────────────
 // HOVED-APP
 // ─────────────────────────────────────────────
+const MODAL_INNHOLD = {
+  personvern: {
+    tittel: "Personvernerklæring",
+    tekst: "BoligEffekt behandler kun informasjonen du oppgir i kalkulatoren for å beregne energimerke og gi anbefalinger. Vi lagrer ikke personopplysninger uten ditt samtykke. Ved kjøp av rapport lagres e-postadressen din for å sende rapporten. Betaling håndteres av Stripe og vi har ikke tilgang til kortinformasjon. Kontakt: kontakt@boligeffekt.no. Behandlingsansvarlig: BoligEffekt AS.",
+  },
+  vilkår: {
+    tittel: "Vilkår for bruk",
+    tekst: "BoligEffekts energianalyse er et estimeringsverktøy basert på NS-EN ISO 52000 og TEK-historikk. Resultatene er veiledende og ikke et offisielt energimerke. For offisielt energimerke kreves godkjent energirådgiver. BoligEffekt AS er ikke ansvarlig for beslutninger tatt på bakgrunn av estimatene. Kjøp av rapport gir engangstilgang. Ingen refusjon etter at rapporten er generert og sendt.",
+  },
+  ki: {
+    tittel: "Bruk av kunstig intelligens",
+    tekst: "BoligEffekt bruker KI på to måter: 1) Chatboten drives av Claude AI fra Anthropic og gir generelle svar om energimerking og Enova. Chatboten erstatter ikke profesjonell rådgivning. 2) Nyhetsoppsummeringer genereres av KI basert på kjent informasjon om energimerking og Enova i Norge. Selve energiberegningen er regelbasert og følger NS-EN ISO 52000 og TEK-historikk.",
+  },
+};
+
 export default function App() {
-  const [skjerm, setSkjerm]     = useState("start");
-  const [steg, setSteg]         = useState(0);
-  const [svar, setSvar]         = useState({});
-  const [avForm, setAvForm]     = useState({ areal:"", byggeår:"", boligtype:"enebolig", klimasone:"3", oppvarming:"direkte_el", vinduer_type:"dobbel", isolering_nivå:"normal", antall_etasjer:2 });
-  const [resultat, setResultat] = useState(null);
-  const [input, setInput]       = useState(null);
-  const [betalt, setBetalt]     = useState(false);
-  const [epost, setEpost]       = useState("");
-  const [pakke, setPakke]       = useState("energirapport");
-  const [pdfSendt, setPdfSendt] = useState(false);
+  const [skjerm, setSkjerm]         = useState("start");
+  const [steg, setSteg]             = useState(0);
+  const [svar, setSvar]             = useState({});
+  const [oppvarmingValg, setOppvarmingValg] = useState([]); // [{kilde, andel}]
+  const [avForm, setAvForm]         = useState({ areal:"", byggeår:"", boligtype:"enebolig", klimasone:"3", oppvarming:"direkte_el", vinduer_type:"dobbel", isolering_nivå:"normal", antall_etasjer:2 });
+  const [resultat, setResultat]     = useState(null);
+  const [input, setInput]           = useState(null);
+  const [betalt, setBetalt]         = useState(false);
+  const [epost, setEpost]           = useState("");
+  const [pakke, setPakke]           = useState("energirapport");
+  const [pdfSendt, setPdfSendt]     = useState(false);
+  const [modal, setModal]           = useState(null);
 
   // Håndter Stripe-redirect tilbake til appen
   useEffect(() => {
@@ -1098,7 +1199,6 @@ export default function App() {
 
     console.log("[REDIRECT] Gjenoppretter rapport – pakke:", lagret.pakke, "| e-post:", lagret.epost);
 
-    // Gjenopprett all state fra før Stripe-redirect
     setResultat(lagret.resultat);
     setInput(lagret.input);
     setEpost(lagret.epost || "");
@@ -1106,10 +1206,8 @@ export default function App() {
     setBetalt(true);
     setSkjerm("resultat");
 
-    // Fjern session_id fra URL så refresh ikke re-trigger
     window.history.replaceState({}, "", "/");
 
-    // Send PDF-rapport automatisk etter betaling
     fetch(`${BACKEND}/api/send-rapport`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1138,19 +1236,22 @@ export default function App() {
     else lagOgVis({ areal: nyttSvar.areal||100, byggeår: nyttSvar.byggeår||1978, boligtype: nyttSvar.boligtype||"enebolig", klimasone: nyttSvar.klimasone||"3", oppvarming: nyttSvar.oppvarming||"direkte_el", vinduer_type: nyttSvar.vinduer_type||"dobbel", isolering_nivå:"normal", antall_etasjer:2 });
   }
 
-  function nullstill() { setSkjerm("start"); setSteg(0); setSvar({}); setResultat(null); setInput(null); setBetalt(false); setPakke("energirapport"); setPdfSendt(false); }
+  function nullstill() {
+    setSkjerm("start"); setSteg(0); setSvar({}); setOppvarmingValg([]);
+    setResultat(null); setInput(null); setBetalt(false); setPakke("energirapport"); setPdfSendt(false);
+  }
 
   // Resultat-skjerm
   if (skjerm === "resultat" && resultat) {
     if (betalt) return <><FullRapport resultat={resultat} epost={epost} pdfSendt={pdfSendt} pakke={pakke} onNullstill={nullstill}/><Chatbot/></>;
-    return <><Betalingsmur resultat={resultat} input={input} onBetalt={(e, p) => { setEpost(e); setPakke(p); setBetalt(true); }}/><Chatbot/></>;
+    return <><Betalingsmur resultat={resultat} input={input} onBetalt={(e, p) => { setEpost(e); setPakke(p); setBetalt(true); }} onNullstill={nullstill}/><Chatbot/></>;
   }
 
   // Avansert skjema
   if (skjerm === "avansert") return (
     <>
       <div style={S.app}>
-        <Header onBack={nullstill}/>
+        <Header onBack={nullstill} onHome={nullstill}/>
         <div style={S.wrap}>
           <div style={{textAlign:"center",marginBottom:24}}>
             <div style={S.tag}>Avansert analyse</div>
@@ -1191,10 +1292,129 @@ export default function App() {
   // Enkel steg-for-steg
   if (skjerm === "enkel") {
     const s = STEG[steg];
+
+    // Multi-select oppvarming step
+    if (s.id === "oppvarming") {
+      const toggleOppvarming = (verdi) => {
+        const idx = oppvarmingValg.findIndex(o => o.kilde === verdi);
+        if (idx >= 0) {
+          // Deselect
+          const ny = oppvarmingValg.filter(o => o.kilde !== verdi);
+          if (ny.length === 0) { setOppvarmingValg([]); return; }
+          if (ny.length === 1) { setOppvarmingValg([{ kilde: ny[0].kilde, andel: 1.0 }]); return; }
+          if (ny.length === 2) { setOppvarmingValg([{ kilde: ny[0].kilde, andel: 0.6 }, { kilde: ny[1].kilde, andel: 0.4 }]); return; }
+          setOppvarmingValg(ny);
+        } else if (oppvarmingValg.length < 3) {
+          // Add
+          const n = oppvarmingValg.length;
+          if (n === 0) setOppvarmingValg([{ kilde: verdi, andel: 1.0 }]);
+          else if (n === 1) setOppvarmingValg([{ kilde: oppvarmingValg[0].kilde, andel: 0.6 }, { kilde: verdi, andel: 0.4 }]);
+          else setOppvarmingValg([{ kilde: oppvarmingValg[0].kilde, andel: 0.5 }, { kilde: oppvarmingValg[1].kilde, andel: 0.3 }, { kilde: verdi, andel: 0.2 }]);
+        }
+      };
+
+      const adjustAndel = (i, delta) => {
+        const ny = oppvarmingValg.map(o => ({ ...o }));
+        const newVal = Math.round((ny[i].andel + delta) * 10) / 10;
+        if (newVal < 0.1 || newVal > 0.9) return;
+        const diff = -delta;
+        // Distribute diff to other sources proportionally
+        const others = ny.filter((_, j) => j !== i);
+        if (others.length === 1) {
+          const otherIdx = i === 0 ? 1 : 0;
+          const otherNew = Math.round((ny[otherIdx].andel + diff) * 10) / 10;
+          if (otherNew < 0.1) return;
+          ny[i].andel = newVal;
+          ny[otherIdx].andel = otherNew;
+        } else if (others.length === 2) {
+          const o1 = i === 0 ? 1 : 0;
+          const o2 = i === 2 ? 1 : 2;
+          const newO1 = Math.round((ny[o1].andel + diff / 2) * 10) / 10;
+          const newO2 = Math.round((ny[o2].andel + diff / 2) * 10) / 10;
+          if (newO1 < 0.1 || newO2 < 0.1) return;
+          ny[i].andel = newVal;
+          ny[o1].andel = newO1;
+          ny[o2].andel = newO2;
+        }
+        setOppvarmingValg(ny);
+      };
+
+      const bekreft = () => {
+        if (oppvarmingValg.length === 0) return;
+        const verdi = oppvarmingValg.length === 1 ? oppvarmingValg[0].kilde : oppvarmingValg;
+        const nyttSvar = { ...svar, oppvarming: verdi };
+        setSvar(nyttSvar);
+        if (steg < STEG.length - 1) { setTimeout(() => setSteg(steg + 1), 260); }
+        else lagOgVis({ areal: nyttSvar.areal||100, byggeår: nyttSvar.byggeår||1978, boligtype: nyttSvar.boligtype||"enebolig", klimasone: nyttSvar.klimasone||"3", oppvarming: verdi, vinduer_type: nyttSvar.vinduer_type||"dobbel", isolering_nivå:"normal", antall_etasjer:2 });
+      };
+
+      const LABELS = ["Primær","Sekundær","Tertiær"];
+
+      return (
+        <>
+          <div style={S.app}>
+            <Header onBack={()=>steg===0?nullstill():setSteg(steg-1)} onHome={nullstill}/>
+            <div style={S.wrap}>
+              <div style={S.prog}><div style={S.fill((steg/STEG.length)*100)}/></div>
+              <div style={{textAlign:"center",marginBottom:28}}>
+                <div style={S.tag}>Spørsmål {steg+1} av {STEG.length}</div>
+                <h2 style={{fontFamily:"Georgia,serif",fontWeight:800,fontSize:"clamp(1.3rem,4vw,1.8rem)",color:C.navyDark,marginBottom:8}}>{s.tittel}</h2>
+                <p style={S.sub}>{s.hint}</p>
+              </div>
+              <div style={S.grid}>
+                {OPPVARMING_VALG.map(v => {
+                  const selIdx = oppvarmingValg.findIndex(o => o.kilde === v.verdi);
+                  const sel = selIdx >= 0;
+                  return (
+                    <button key={v.verdi}
+                      style={{...S.btn(sel),position:"relative"}}
+                      onClick={() => toggleOppvarming(v.verdi)}
+                      onMouseEnter={e=>{if(!sel){e.currentTarget.style.borderColor=C.navy;e.currentTarget.style.transform="translateY(-2px)";}}}
+                      onMouseLeave={e=>{if(!sel){e.currentTarget.style.borderColor=C.border;e.currentTarget.style.transform="";}}}>
+                      {sel && (
+                        <span style={{position:"absolute",top:6,right:6,width:18,height:18,borderRadius:"50%",background:C.green,color:"#fff",fontSize:"0.65rem",fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          {selIdx+1}
+                        </span>
+                      )}
+                      <span style={S.ikon}>{v.ikon}</span>{v.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {oppvarmingValg.length >= 2 && (
+                <div style={{...S.card,marginTop:16}}>
+                  <div style={{fontWeight:700,fontSize:"0.85rem",color:C.navyDark,marginBottom:12}}>Fordeling av oppvarmingskilder</div>
+                  {oppvarmingValg.map((o, i) => (
+                    <div key={o.kilde} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                      <span style={{fontSize:"0.78rem",fontWeight:700,color:C.muted,width:60,flexShrink:0}}>{LABELS[i]}</span>
+                      <span style={{flex:1,fontSize:"0.82rem",color:C.navyDark}}>{OPPVARMING_DATA[o.kilde]?.label || o.kilde}</span>
+                      <button onClick={()=>adjustAndel(i,-0.1)} style={{...S.btnG,padding:"4px 10px",fontSize:"0.9rem"}}>−</button>
+                      <span style={{fontWeight:800,fontSize:"0.88rem",color:C.navyDark,width:36,textAlign:"center"}}>{Math.round(o.andel*100)}%</span>
+                      <button onClick={()=>adjustAndel(i,0.1)} style={{...S.btnG,padding:"4px 10px",fontSize:"0.9rem"}}>+</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <button
+                style={{...S.btnP,marginTop:20,opacity:oppvarmingValg.length===0?0.5:1}}
+                disabled={oppvarmingValg.length===0}
+                onClick={bekreft}
+              >
+                Bekreft valg →
+              </button>
+            </div>
+          </div>
+          <Chatbot/>
+        </>
+      );
+    }
+
     return (
       <>
         <div style={S.app}>
-          <Header onBack={()=>steg===0?nullstill():setSteg(steg-1)}/>
+          <Header onBack={()=>steg===0?nullstill():setSteg(steg-1)} onHome={nullstill}/>
           <div style={S.wrap}>
             <div style={S.prog}><div style={S.fill((steg/STEG.length)*100)}/></div>
             <div style={{textAlign:"center",marginBottom:28}}>
@@ -1222,7 +1442,7 @@ export default function App() {
   return (
     <>
       <div style={S.app}>
-        <Header/>
+        <Header onHome={nullstill}/>
         <div style={S.wrap}>
           <div style={{textAlign:"center",marginBottom:36,paddingTop:16}}>
             <div style={S.tag}>Gratis energianalyse</div>
@@ -1239,10 +1459,58 @@ export default function App() {
               <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,color:C.white,borderRadius:10,padding:"12px 28px",fontWeight:700,fontSize:"0.95rem",display:"inline-block"}}>Start her →</div>
             </div>
           </div>
+
+          {/* Urgency banner */}
+          <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,borderRadius:20,padding:"24px",marginTop:18,marginBottom:4}}>
+            <div style={{color:C.white,fontWeight:800,fontSize:"1.05rem",marginBottom:18,textAlign:"center"}}>⏰ Hva koster det å vente?</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:16}}>
+              {[
+                {tid:"I år",         ikon:"💡", tekst:"Handle nå og få full Enova-støtte opptil 136 000 kr"},
+                {tid:"Om 2–3 år",    ikon:"📈", tekst:"Håndverkere fullt booket – lengre ventetid og høyere priser"},
+                {tid:"Om 5 år",      ikon:"⚠️", tekst:"EPBD-krav tvinger frem tiltak – da må alle gjøre det samtidig"},
+              ].map(x=>(
+                <div key={x.tid} style={{textAlign:"center"}}>
+                  <div style={{fontWeight:700,fontSize:"0.68rem",color:"rgba(255,255,255,0.55)",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.05em"}}>{x.tid}</div>
+                  <div style={{fontSize:"1.4rem",marginBottom:6}}>{x.ikon}</div>
+                  <div style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.85)",lineHeight:1.45}}>{x.tekst}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{textAlign:"center",background:`${C.green}30`,borderRadius:10,padding:"10px 14px",fontSize:"0.82rem",fontWeight:600,color:C.greenLight}}>
+              Hver måned du venter koster deg penger i unødvendig strøm
+            </div>
+          </div>
+
           <KunnskapsHub/>
           <p style={{textAlign:"center",fontSize:"0.7rem",color:"#bbb",marginTop:20}}>NS-EN ISO 52000 · TEK17 · EU EPBD 2024/1275 · Gratis energimerke-estimat</p>
+
+          {/* Privacy footer */}
+          <div style={{fontSize:"0.72rem",color:"#aaa",textAlign:"center",padding:"20px 0 8px"}}>
+            © 2025 BoligEffekt
+            {" · "}<span style={{cursor:"pointer",textDecoration:"underline"}} onClick={()=>setModal("personvern")}>Personvern</span>
+            {" · "}<span style={{cursor:"pointer",textDecoration:"underline"}} onClick={()=>setModal("vilkår")}>Vilkår</span>
+            {" · "}<span style={{cursor:"pointer",textDecoration:"underline"}} onClick={()=>setModal("ki")}>Om bruk av KI</span>
+            {" · "}<a href="https://www.instagram.com/boligeffekt" target="_blank" rel="noopener noreferrer" style={{color:"#aaa",textDecoration:"none"}}>Instagram</a>
+            {" · "}<a href="https://www.facebook.com/boligeffekt" target="_blank" rel="noopener noreferrer" style={{color:"#aaa",textDecoration:"none"}}>Facebook</a>
+          </div>
         </div>
       </div>
+
+      {/* Privacy modal */}
+      {modal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setModal(null)}>
+          <div style={{background:C.white,borderRadius:20,maxWidth:500,width:"100%",overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,0.25)"}} onClick={e=>e.stopPropagation()}>
+            <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,padding:"18px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{color:C.white,fontWeight:700,fontSize:"1rem"}}>{MODAL_INNHOLD[modal].tittel}</div>
+              <button onClick={()=>setModal(null)} style={{background:"rgba(255,255,255,0.15)",border:"none",color:C.white,borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:"1.2rem",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+            </div>
+            <div style={{padding:32}}>
+              <p style={{fontSize:"0.87rem",color:C.navyDark,lineHeight:1.75,margin:0}}>{MODAL_INNHOLD[modal].tekst}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Chatbot/>
     </>
   );
