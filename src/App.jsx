@@ -1299,47 +1299,33 @@ export default function App() {
 
     // Multi-select oppvarming step
     if (s.id === "oppvarming") {
+      const DEFAULT_SPLITS = { 1: [1.0], 2: [0.7, 0.3], 3: [0.6, 0.3, 0.1] };
+
       const toggleOppvarming = (verdi) => {
         const idx = oppvarmingValg.findIndex(o => o.kilde === verdi);
         if (idx >= 0) {
-          // Deselect
-          const ny = oppvarmingValg.filter(o => o.kilde !== verdi);
-          if (ny.length === 0) { setOppvarmingValg([]); return; }
-          if (ny.length === 1) { setOppvarmingValg([{ kilde: ny[0].kilde, andel: 1.0 }]); return; }
-          if (ny.length === 2) { setOppvarmingValg([{ kilde: ny[0].kilde, andel: 0.6 }, { kilde: ny[1].kilde, andel: 0.4 }]); return; }
-          setOppvarmingValg(ny);
+          // Deselect – rebuild with correct default splits
+          const kilder = oppvarmingValg.filter(o => o.kilde !== verdi).map(o => o.kilde);
+          const splits = DEFAULT_SPLITS[kilder.length] || [1.0];
+          setOppvarmingValg(kilder.map((k, i) => ({ kilde: k, andel: splits[i] })));
         } else if (oppvarmingValg.length < 3) {
-          // Add
-          const n = oppvarmingValg.length;
-          if (n === 0) setOppvarmingValg([{ kilde: verdi, andel: 1.0 }]);
-          else if (n === 1) setOppvarmingValg([{ kilde: oppvarmingValg[0].kilde, andel: 0.6 }, { kilde: verdi, andel: 0.4 }]);
-          else setOppvarmingValg([{ kilde: oppvarmingValg[0].kilde, andel: 0.5 }, { kilde: oppvarmingValg[1].kilde, andel: 0.3 }, { kilde: verdi, andel: 0.2 }]);
+          // Add – append with correct default splits
+          const kilder = [...oppvarmingValg.map(o => o.kilde), verdi];
+          const splits = DEFAULT_SPLITS[kilder.length];
+          setOppvarmingValg(kilder.map((k, i) => ({ kilde: k, andel: splits[i] })));
         }
       };
 
       const adjustAndel = (i, delta) => {
         const ny = oppvarmingValg.map(o => ({ ...o }));
         const newVal = Math.round((ny[i].andel + delta) * 10) / 10;
-        if (newVal < 0.1 || newVal > 0.9) return;
-        const diff = -delta;
-        // Distribute diff to other sources proportionally
-        const others = ny.filter((_, j) => j !== i);
-        if (others.length === 1) {
-          const otherIdx = i === 0 ? 1 : 0;
-          const otherNew = Math.round((ny[otherIdx].andel + diff) * 10) / 10;
-          if (otherNew < 0.1) return;
-          ny[i].andel = newVal;
-          ny[otherIdx].andel = otherNew;
-        } else if (others.length === 2) {
-          const o1 = i === 0 ? 1 : 0;
-          const o2 = i === 2 ? 1 : 2;
-          const newO1 = Math.round((ny[o1].andel + diff / 2) * 10) / 10;
-          const newO2 = Math.round((ny[o2].andel + diff / 2) * 10) / 10;
-          if (newO1 < 0.1 || newO2 < 0.1) return;
-          ny[i].andel = newVal;
-          ny[o1].andel = newO1;
-          ny[o2].andel = newO2;
-        }
+        if (newVal < 0.1 || newVal > 1 - (ny.length - 1) * 0.1) return;
+        // Always take from / give to the last source that isn't i
+        const otherIdx = i === ny.length - 1 ? ny.length - 2 : ny.length - 1;
+        const otherNew = Math.round((ny[otherIdx].andel - delta) * 10) / 10;
+        if (otherNew < 0.1) return;
+        ny[i].andel = newVal;
+        ny[otherIdx].andel = otherNew;
         setOppvarmingValg(ny);
       };
 
