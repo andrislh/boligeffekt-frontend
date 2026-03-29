@@ -894,38 +894,45 @@ function KunnskapsHub() {
 
             <div style={{textAlign:"center",fontSize:"0.7rem",color:"#bbb",marginBottom:14}}>Sist oppdatert: Januar 2025</div>
 
-            {/* Søknadssteg */}
+            {/* Søknadssteg – steg 1 synlig, resten låst */}
             <div style={{fontWeight:700,fontSize:"0.9rem",color:C.navyDark,marginBottom:10}}>Slik søker du Enova-støtte – steg for steg</div>
-            {[
-              ["1","Kontroller at du kvalifiserer","Tiltaket må gjelde din primærbolig. Du kan ikke ha startet arbeidet før søknaden er godkjent."],
-              ["2","Innhent pristilbud","Få minst ett skriftlig tilbud fra godkjent installatør eller håndverker som dokumenterer tiltaket."],
-              ["3","Søk på enova.no","Gå til enova.no/privat → velg ditt tiltak → fyll ut søknadsskjemaet. Ta vare på søknadsnummeret."],
-              ["4","Vent på godkjenning","Enova behandler søknaden (typisk 1–4 uker). Ikke start arbeidet før du har fått godkjenning."],
-              ["5","Gjennomfør tiltaket","Bruk godkjent fagperson. Sørg for at all dokumentasjon (faktura, tekniske data) er i orden."],
-              ["6","Send sluttdokumentasjon","Last opp faktura og teknisk dokumentasjon på enova.no innen fristen. Støtten utbetales til konto."],
-            ].map(([nr,tittel,tekst])=>(
-              <div key={nr} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:12}}>
-                <div style={{width:24,height:24,borderRadius:"50%",background:C.navy,color:C.white,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.72rem",fontWeight:800,flexShrink:0}}>{nr}</div>
-                <div>
-                  <div style={{fontWeight:700,fontSize:"0.83rem",color:C.navyDark,marginBottom:2}}>{tittel}</div>
-                  <div style={{fontSize:"0.76rem",color:C.muted,lineHeight:1.55}}>{tekst}</div>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:12}}>
+              <div style={{width:24,height:24,borderRadius:"50%",background:C.navy,color:C.white,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.72rem",fontWeight:800,flexShrink:0}}>1</div>
+              <div>
+                <div style={{fontWeight:700,fontSize:"0.83rem",color:C.navyDark,marginBottom:2}}>Kontroller at du kvalifiserer</div>
+                <div style={{fontSize:"0.76rem",color:C.muted,lineHeight:1.55}}>Tiltaket må gjelde din primærbolig. Du kan ikke ha startet arbeidet før søknaden er godkjent.</div>
+              </div>
+            </div>
+
+            {/* Blurred rest with overlay */}
+            <div style={{position:"relative",marginBottom:14}}>
+              <div style={{filter:"blur(3px)",userSelect:"none",pointerEvents:"none",opacity:0.5}}>
+                {[
+                  ["2","Innhent pristilbud","Få minst ett skriftlig tilbud fra godkjent installatør eller håndverker som dokumenterer tiltaket."],
+                  ["3","Søk på enova.no","Gå til enova.no/privat → velg ditt tiltak → fyll ut søknadsskjemaet. Ta vare på søknadsnummeret."],
+                ].map(([nr,tittel,tekst])=>(
+                  <div key={nr} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:12}}>
+                    <div style={{width:24,height:24,borderRadius:"50%",background:C.navy,color:C.white,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.72rem",fontWeight:800,flexShrink:0}}>{nr}</div>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:"0.83rem",color:C.navyDark,marginBottom:2}}>{tittel}</div>
+                      <div style={{fontSize:"0.76rem",color:C.muted,lineHeight:1.55}}>{tekst}</div>
+                    </div>
+                  </div>
+                ))}
+                <div style={{fontWeight:700,fontSize:"0.9rem",color:C.navyDark,margin:"16px 0 10px"}}>Vanlige spørsmål om Enova-støtte</div>
+                <div style={{border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 14px",marginBottom:8}}>
+                  <div style={{fontWeight:700,fontSize:"0.81rem",color:C.navyDark,marginBottom:4}}>Kan jeg kombinere flere tiltak i én søknad?</div>
+                  <div style={{fontSize:"0.76rem",color:C.muted,lineHeight:1.55}}>Ja, du kan søke om støtte til flere tiltak samtidig.</div>
                 </div>
               </div>
-            ))}
-
-            {/* FAQ */}
-            <div style={{fontWeight:700,fontSize:"0.9rem",color:C.navyDark,margin:"16px 0 10px"}}>Vanlige spørsmål om Enova-støtte</div>
-            {[
-              ["Kan jeg kombinere flere tiltak i én søknad?","Ja, du kan søke om støtte til flere tiltak samtidig. Dette er faktisk anbefalt – det er mer effektivt og du slipper flere søknadsprosesser."],
-              ["Hva skjer om jeg starter arbeidet før godkjenning?","Du mister retten til støtte. Enova er tydelige på at arbeidet ikke kan starte før søknaden er godkjent."],
-              ["Må jeg bruke godkjent fagperson?","For de fleste tiltak (varmepumpe, ventilasjon, solceller) ja. For enklere tiltak som tetting kan du gjøre det selv, men dokumentasjon kreves."],
-              ["Når får jeg pengene?","Normalt 4–8 uker etter at sluttdokumentasjonen er godkjent."],
-            ].map(([sp,sv])=>(
-              <div key={sp} style={{border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 14px",marginBottom:8}}>
-                <div style={{fontWeight:700,fontSize:"0.81rem",color:C.navyDark,marginBottom:4}}>{sp}</div>
-                <div style={{fontSize:"0.76rem",color:C.muted,lineHeight:1.55}}>{sv}</div>
+              <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <div style={{background:C.white,borderRadius:14,padding:"16px 20px",boxShadow:"0 8px 32px rgba(27,58,92,0.13)",textAlign:"center",border:`1.5px solid ${C.green}40`,maxWidth:220}}>
+                  <div style={{fontSize:"1.3rem",marginBottom:6}}>🔒</div>
+                  <div style={{fontWeight:800,fontSize:"0.88rem",color:C.navyDark,marginBottom:4}}>Full guide i Energirapport</div>
+                  <div style={{fontSize:"0.73rem",color:C.muted,lineHeight:1.45}}>Komplett søknadsveiledning og FAQ følger med rapporten</div>
+                </div>
               </div>
-            ))}
+            </div>
 
             <a href="https://www.enova.no/privat/alle-energitiltak/" target="_blank" rel="noopener noreferrer"
               style={{display:"block",marginTop:14,textAlign:"center",background:`linear-gradient(135deg,${C.green},${C.greenLight})`,color:C.white,borderRadius:10,padding:"12px",fontWeight:700,fontSize:"0.88rem",textDecoration:"none"}}>
@@ -1454,27 +1461,7 @@ export default function App() {
               <div style={{fontWeight:800,fontSize:"1.1rem",color:C.navyDark,marginBottom:5}}>Enkel analyse</div>
               <div style={{...S.sub,marginBottom:16}}>6 spørsmål · 2 minutter · Ingen fagkunnskap nødvendig</div>
               <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,color:C.white,borderRadius:10,padding:"12px 28px",fontWeight:700,fontSize:"0.95rem",display:"inline-block"}}>Start her →</div>
-            </div>
-          </div>
-
-          {/* Urgency banner */}
-          <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,borderRadius:20,padding:"24px",marginTop:18,marginBottom:4}}>
-            <div style={{color:C.white,fontWeight:800,fontSize:"1.05rem",marginBottom:18,textAlign:"center"}}>⏰ Hva koster det å vente?</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:16}}>
-              {[
-                {tid:"I år",         ikon:"💡", tekst:"Handle nå og få full Enova-støtte opptil 136 000 kr"},
-                {tid:"Om 2–3 år",    ikon:"📈", tekst:"Håndverkere fullt booket – lengre ventetid og høyere priser"},
-                {tid:"Om 5 år",      ikon:"⚠️", tekst:"EPBD-krav tvinger frem tiltak – da må alle gjøre det samtidig"},
-              ].map(x=>(
-                <div key={x.tid} style={{textAlign:"center"}}>
-                  <div style={{fontWeight:700,fontSize:"0.68rem",color:"rgba(255,255,255,0.55)",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.05em"}}>{x.tid}</div>
-                  <div style={{fontSize:"1.4rem",marginBottom:6}}>{x.ikon}</div>
-                  <div style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.85)",lineHeight:1.45}}>{x.tekst}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{textAlign:"center",background:`${C.green}30`,borderRadius:10,padding:"10px 14px",fontSize:"0.82rem",fontWeight:600,color:C.greenLight}}>
-              Hver måned du venter koster deg penger i unødvendig strøm
+              <div style={{fontSize:"0.75rem",color:C.muted,marginTop:12}}>💡 Enova-støtte opptil 136 000 kr — søk før håndverkerne er fullt booket</div>
             </div>
           </div>
 
