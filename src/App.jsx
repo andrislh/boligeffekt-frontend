@@ -186,7 +186,7 @@ function Header({ onBack, onHome }) {
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap"/>
       <div style={S.header}>
         <div onClick={onHome} style={{display:"flex",alignItems:"center",gap:12,cursor:onHome?"pointer":"default"}}>
-          <img src="/logo.png" alt="BoligEffekt" style={{height:"38px",width:"38px",objectFit:"contain"}}/>
+          <img src="/Logo.png" alt="BoligEffekt" style={{height:"38px",width:"38px",objectFit:"contain"}}/>
           <span style={S.logo}>BoligEffekt</span>
         </div>
         {onBack && <button onClick={onBack} style={{...S.btnG,marginLeft:"auto"}}>← Tilbake</button>}
