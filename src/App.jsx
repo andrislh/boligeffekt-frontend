@@ -182,8 +182,6 @@ const S = {
 function Header({ onBack, onHome }) {
   return (
     <>
-      <link rel="preconnect" href="https://fonts.googleapis.com"/>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap"/>
       <div style={S.header}>
         <div onClick={onHome} style={{display:"flex",alignItems:"center",gap:12,cursor:onHome?"pointer":"default"}}>
           <img src="/logo.png" alt="BoligEffekt" style={{height:"36px",width:"36px",objectFit:"contain"}}/>
@@ -361,12 +359,12 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
           <div style={{fontSize:"0.78rem",color:C.muted,textAlign:"center",marginBottom:10,lineHeight:1.5}}>
             En energirådgiver koster 9 000–20 000 kr. Her får du den samme analysen for 199 kr.
           </div>
+          <div style={{display:"flex",justifyContent:"center",gap:16,marginBottom:10}}>
+            {["💳 Kort","🔒 Stripe","📄 PDF på e-post"].map(x=><span key={x} style={{fontSize:"0.72rem",color:C.muted}}>{x}</span>)}
+          </div>
           <button style={{...S.btnP,background:`linear-gradient(135deg,${C.green},${C.greenLight})`,boxShadow:`0 6px 20px ${C.green}44`}} onClick={betal} disabled={laster}>
             {laster ? "Sender til betaling…" : `Velg ${PAKKER[pakke].navn} – ${PAKKER[pakke].pris} kr →`}
           </button>
-          <div style={{display:"flex",justifyContent:"center",gap:16,marginTop:14}}>
-            {["💳 Kort","🔒 Stripe","📄 PDF på e-post"].map(x=><span key={x} style={{fontSize:"0.72rem",color:C.muted}}>{x}</span>)}
-          </div>
         </div>
         <p style={{textAlign:"center",fontSize:"0.7rem",color:"#bbb",lineHeight:1.6}}>Betaling håndteres av Stripe. BoligEffekt lagrer ikke kortinformasjon.</p>
       </div>
@@ -1090,7 +1088,7 @@ function Chatbot() {
   }
 
   return (
-    <div style={{position:"fixed",bottom:24,right:20,zIndex:1000,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10}}>
+    <div style={{position:"fixed",bottom:window.innerWidth<=600?80:24,right:20,zIndex:1000,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10}}>
       {aapen && (
         <div style={{width:310,height:420,background:C.white,borderRadius:18,boxShadow:"0 12px 48px rgba(27,58,92,0.18)",border:`1px solid ${C.border}`,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           {/* Header */}
