@@ -186,7 +186,7 @@ function Header({ onBack, onHome }) {
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap"/>
       <div style={S.header}>
         <div onClick={onHome} style={{display:"flex",alignItems:"center",gap:12,cursor:onHome?"pointer":"default"}}>
-          <img src="/Logo.png" alt="BoligEffekt" style={{height:"36px",width:"36px",objectFit:"contain"}}/>
+          <img src="/logo.png" alt="BoligEffekt" style={{height:"36px",width:"36px",objectFit:"contain"}}/>
           <span style={S.logo}>BoligEffekt</span>
         </div>
         {onBack && <button onClick={onBack} style={{...S.btnG,marginLeft:"auto"}}>← Tilbake</button>}
@@ -357,6 +357,9 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
             <input style={S.inp} type="email" placeholder="navn@epost.no" value={epost}
               onChange={e=>setEpost(e.target.value)} onKeyDown={e=>e.key==="Enter"&&betal()}/>
             {feil && <div style={{color:"#e53e3e",fontSize:"0.8rem",marginTop:5}}>{feil}</div>}
+          </div>
+          <div style={{fontSize:"0.78rem",color:C.muted,textAlign:"center",marginBottom:10,lineHeight:1.5}}>
+            En energirådgiver koster 9 000–20 000 kr. Her får du den samme analysen for 199 kr.
           </div>
           <button style={{...S.btnP,background:`linear-gradient(135deg,${C.green},${C.greenLight})`,boxShadow:`0 6px 20px ${C.green}44`}} onClick={betal} disabled={laster}>
             {laster ? "Sender til betaling…" : `Velg ${PAKKER[pakke].navn} – ${PAKKER[pakke].pris} kr →`}
