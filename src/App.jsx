@@ -380,15 +380,22 @@ function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
   const [valgte, setValgte] = useState(
     () => new Set(resultat.tiltak.filter(t => t.prioritet === "høy").map(t => t.id))
   );
-  const [sender, setSender] = useState(false);
-  const [feil, setFeil]     = useState("");
+  const [sender, setSender]         = useState(false);
+  const [feil, setFeil]             = useState("");
+  const [leadNavn, setLeadNavn]     = useState("");
+  const [leadTlf, setLeadTlf]       = useState("");
+  const [leadSendt, setLeadSendt]   = useState(false);
+  const [leadLaster, setLeadLaster] = useState(false);
 
-  const valgTiltak = resultat.tiltak.filter(t => valgte.has(t.id));
-  const totInv     = valgTiltak.reduce((s, t) => s + t.kostnad_snitt, 0);
-  const totStøtte  = valgTiltak.reduce((s, t) => s + t.støtte_snitt, 0);
-  const netto      = totInv - totStøtte;
-  const totBes     = valgTiltak.reduce((s, t) => s + t.besparelse_kr, 0);
-  const breakEven  = totBes > 0 ? Math.round(netto / totBes) : "–";
+  const valgTiltak  = resultat.tiltak.filter(t => valgte.has(t.id));
+  const totInv      = valgTiltak.reduce((s, t) => s + t.kostnad_snitt, 0);
+  const totStøtte   = valgTiltak.reduce((s, t) => s + t.støtte_snitt, 0);
+  const netto       = totInv - totStøtte;
+  const totBes      = valgTiltak.reduce((s, t) => s + t.besparelse_kr, 0);
+  const breakEven   = totBes > 0 ? Math.round(netto / totBes) : "–";
+  const kwhPctTotal = Math.min(valgTiltak.reduce((s, t) => s + t.kWh_pct, 0), 0.85);
+  const nyKwhPerM2  = Math.round(resultat.kwhPerM2 * (1 - kwhPctTotal));
+  const nyMerke     = ENERGIMERKER.find(e => nyKwhPerM2 <= e.maks) || ENERGIMERKER[6];
 
   function toggleTiltak(id) {
     setValgte(prev => {
@@ -532,6 +539,31 @@ function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
                   <div style={{fontSize:"1.3rem",fontWeight:900,color:C.greenLight}}>{(totBes*10).toLocaleString("no")} kr</div>
                 </div>
               </div>
+              {/* Energikarakter-forbedring */}
+              <div style={{background:`${C.green}10`,border:`1px solid ${C.green}30`,borderRadius:12,padding:"16px",marginBottom:16}}>
+                <div style={{fontWeight:700,fontSize:"0.82rem",color:C.navyDark,marginBottom:12}}>⚡ Estimert energikarakter etter tiltak</div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:20}}>
+                  <div style={{textAlign:"center"}}>
+                    <div style={{fontSize:"0.68rem",color:C.muted,fontWeight:700,marginBottom:5}}>I dag</div>
+                    <div style={{width:54,height:54,borderRadius:14,background:resultat.merke.farge,color:resultat.merke.tekst,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.9rem",fontWeight:900,fontFamily:"Georgia,serif",boxShadow:`0 4px 14px ${resultat.merke.farge}55`}}>{resultat.merke.merke}</div>
+                    <div style={{fontSize:"0.67rem",color:C.muted,marginTop:5}}>{resultat.kwhPerM2} kWh/m²</div>
+                  </div>
+                  <div style={{color:C.green,fontSize:"1.8rem",fontWeight:900,lineHeight:1}}>→</div>
+                  <div style={{textAlign:"center"}}>
+                    <div style={{fontSize:"0.68rem",color:C.muted,fontWeight:700,marginBottom:5}}>Med tiltak</div>
+                    <div style={{width:54,height:54,borderRadius:14,background:nyMerke.farge,color:nyMerke.tekst,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.9rem",fontWeight:900,fontFamily:"Georgia,serif",boxShadow:`0 4px 14px ${nyMerke.farge}55`}}>{nyMerke.merke}</div>
+                    <div style={{fontSize:"0.67rem",color:C.muted,marginTop:5}}>{nyKwhPerM2} kWh/m²</div>
+                  </div>
+                </div>
+                {nyMerke.merke !== resultat.merke.merke ? (
+                  <div style={{textAlign:"center",marginTop:10,fontSize:"0.78rem",color:C.green,fontWeight:700}}>
+                    Forbedring på {ENERGIMERKER.findIndex(e=>e.merke===resultat.merke.merke) - ENERGIMERKER.findIndex(e=>e.merke===nyMerke.merke)} energikarakter{ENERGIMERKER.findIndex(e=>e.merke===resultat.merke.merke) - ENERGIMERKER.findIndex(e=>e.merke===nyMerke.merke) > 1 ? "er" : ""}
+                  </div>
+                ) : (
+                  <div style={{textAlign:"center",marginTop:10,fontSize:"0.78rem",color:C.muted}}>Velg flere tiltak for å forbedre karakteren</div>
+                )}
+              </div>
+
               <div style={{fontWeight:700,fontSize:"0.82rem",color:C.navyDark,marginBottom:10}}>Enova-støtte per tiltak</div>
               {valgTiltak.map(t => (
                 <div key={t.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderBottom:`1px solid ${C.section}`}}>
@@ -558,31 +590,81 @@ function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
           </>
         )}
 
-        {/* ── STEG 3: Bekreftelse ── */}
+        {/* ── STEG 3: Bekreftelse + Håndverker CTA ── */}
         {steg === 3 && (
-          <div style={S.card}>
-            <div style={{textAlign:"center",padding:"24px 16px"}}>
-              <div style={{fontSize:"3rem",marginBottom:12}}>✅</div>
-              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:800,fontSize:"1.4rem",color:C.navyDark,marginBottom:8}}>Rapporten er sendt!</div>
-              <div style={{fontSize:"0.88rem",color:C.muted,lineHeight:1.7,marginBottom:24}}>
-                Din Oppgraderingsplan med {valgte.size} tiltak er sendt til <strong>{epost}</strong>.<br/>
-                Sjekk innboksen din – rapporten er klar til bruk.
+          <>
+            <div style={S.card}>
+              <div style={{textAlign:"center",padding:"20px 16px"}}>
+                <div style={{fontSize:"3rem",marginBottom:12}}>✅</div>
+                <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:800,fontSize:"1.4rem",color:C.navyDark,marginBottom:8}}>Rapporten er sendt!</div>
+                <div style={{fontSize:"0.88rem",color:C.muted,lineHeight:1.7,marginBottom:20}}>
+                  Din Oppgraderingsplan med {valgte.size} tiltak er sendt til <strong>{epost}</strong>.<br/>
+                  Sjekk innboksen din – rapporten er klar til bruk.
+                </div>
+                <div style={{display:"grid",gap:10,marginBottom:20}}>
+                  {[
+                    {ikon:"📋",tekst:"Søknadstekst for Enova ligger klar i PDF-en"},
+                    {ikon:"💰",tekst:"Finansieringstips og grønne boliglån er inkludert"},
+                    {ikon:"🔨",tekst:"Husk: søk Enova-støtte FØR du bestiller håndverker"},
+                  ].map(x=>(
+                    <div key={x.ikon} style={{display:"flex",gap:10,alignItems:"center",padding:"10px 13px",background:C.section,borderRadius:10,textAlign:"left"}}>
+                      <span style={{fontSize:"1.1rem",flexShrink:0}}>{x.ikon}</span>
+                      <span style={{fontSize:"0.8rem",color:C.navyDark,fontWeight:600}}>{x.tekst}</span>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={onNullstill} style={S.btnG}>Analyser en annen bolig →</button>
               </div>
-              <div style={{display:"grid",gap:10,marginBottom:24}}>
-                {[
-                  {ikon:"📋",tekst:"Søknadstekst for Enova ligger klar i PDF-en"},
-                  {ikon:"💰",tekst:"Finansieringstips og grønne boliglån er inkludert"},
-                  {ikon:"🔨",tekst:"Husk: søk Enova-støtte FØR du bestiller håndverker"},
-                ].map(x=>(
-                  <div key={x.ikon} style={{display:"flex",gap:10,alignItems:"center",padding:"10px 13px",background:C.section,borderRadius:10,textAlign:"left"}}>
-                    <span style={{fontSize:"1.1rem",flexShrink:0}}>{x.ikon}</span>
-                    <span style={{fontSize:"0.8rem",color:C.navyDark,fontWeight:600}}>{x.tekst}</span>
-                  </div>
-                ))}
-              </div>
-              <button onClick={onNullstill} style={S.btnG}>Analyser en annen bolig →</button>
             </div>
-          </div>
+
+            {/* Håndverker CTA */}
+            <div style={{...S.card,border:`1.5px solid ${C.green}40`}}>
+              {leadSendt ? (
+                <div style={{textAlign:"center",padding:"16px 0"}}>
+                  <div style={{fontSize:"2rem",marginBottom:8}}>🙌</div>
+                  <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:6}}>Takk!</div>
+                  <div style={{fontSize:"0.85rem",color:C.muted,lineHeight:1.6}}>Vi kontakter deg innen 1–2 virkedager med tilbud fra kvalifiserte håndverkere i ditt område.</div>
+                </div>
+              ) : (
+                <>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:14,marginBottom:16}}>
+                    <div style={{fontSize:"1.8rem",flexShrink:0}}>🔨</div>
+                    <div>
+                      <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:4}}>Trenger du hjelp med gjennomføringen?</div>
+                      <div style={{fontSize:"0.82rem",color:C.muted,lineHeight:1.55}}>Vi kan hjelpe deg med å finne kvalifiserte håndverkere for tiltakene du har valgt.</div>
+                    </div>
+                  </div>
+                  <div style={{display:"grid",gap:10,marginBottom:12}}>
+                    <div>
+                      <label style={S.lbl}>Navn</label>
+                      <input style={S.inp} type="text" placeholder="Ola Nordmann" value={leadNavn} onChange={e=>setLeadNavn(e.target.value)}/>
+                    </div>
+                    <div>
+                      <label style={S.lbl}>Telefonnummer</label>
+                      <input style={S.inp} type="tel" placeholder="400 00 000" value={leadTlf} onChange={e=>setLeadTlf(e.target.value)}/>
+                    </div>
+                  </div>
+                  <button
+                    style={{...S.btnP,background:`linear-gradient(135deg,${C.green},${C.greenLight})`,boxShadow:`0 6px 20px ${C.green}44`,opacity:leadLaster?0.7:1}}
+                    disabled={leadLaster}
+                    onClick={async () => {
+                      if (!leadNavn.trim() || !leadTlf.trim()) return;
+                      setLeadLaster(true);
+                      try {
+                        await fetch(`${BACKEND}/api/lead`, {
+                          method:"POST", headers:{"Content-Type":"application/json"},
+                          body: JSON.stringify({ navn:leadNavn, telefon:leadTlf, epost, merke:resultat.merke.merke, tiltak:valgTiltak.map(t=>t.navn) }),
+                        });
+                      } catch(_) {}
+                      setLeadSendt(true); setLeadLaster(false);
+                    }}
+                  >
+                    {leadLaster ? "Sender…" : "Ja, kontakt meg →"}
+                  </button>
+                </>
+              )}
+            </div>
+          </>
         )}
 
       </div>
