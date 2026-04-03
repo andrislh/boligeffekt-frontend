@@ -373,6 +373,224 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
 }
 
 // ─────────────────────────────────────────────
+// OPPGRADERINGSFLOW (Premium – interaktiv 3-steg)
+// ─────────────────────────────────────────────
+function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
+  const [steg, setSteg]     = useState(1);
+  const [valgte, setValgte] = useState(
+    () => new Set(resultat.tiltak.filter(t => t.prioritet === "høy").map(t => t.id))
+  );
+  const [sender, setSender] = useState(false);
+  const [feil, setFeil]     = useState("");
+
+  const valgTiltak = resultat.tiltak.filter(t => valgte.has(t.id));
+  const totInv     = valgTiltak.reduce((s, t) => s + t.kostnad_snitt, 0);
+  const totStøtte  = valgTiltak.reduce((s, t) => s + t.støtte_snitt, 0);
+  const netto      = totInv - totStøtte;
+  const totBes     = valgTiltak.reduce((s, t) => s + t.besparelse_kr, 0);
+  const breakEven  = totBes > 0 ? Math.round(netto / totBes) : "–";
+
+  function toggleTiltak(id) {
+    setValgte(prev => {
+      const ny = new Set(prev);
+      ny.has(id) ? ny.delete(id) : ny.add(id);
+      return ny;
+    });
+  }
+
+  async function sendRapport() {
+    setSender(true); setFeil("");
+    try {
+      const res = await fetch(`${BACKEND}/api/send-rapport`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id:   sessionId,
+          resultatData: { resultat: { ...resultat, tiltak: valgTiltak }, input, epost, pakke: "oppgraderingsplan" },
+          epost,
+          pakke:        "oppgraderingsplan",
+        }),
+      });
+      const data = await res.json();
+      if (data.feil) throw new Error(data.feil);
+      setSteg(3);
+    } catch (_) {
+      setFeil("Noe gikk galt. Prøv igjen eller kontakt support.");
+    }
+    setSender(false);
+  }
+
+  const stegLabels = ["Tiltaksvalg", "Sammenligning", "Rapport sendt"];
+
+  return (
+    <div style={S.app}>
+      <Header onHome={onNullstill}/>
+      <div style={S.wrap}>
+
+        {/* Steg-indikator */}
+        {steg < 3 && (
+          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:24,justifyContent:"center"}}>
+            {stegLabels.map((lbl, i) => (
+              <React.Fragment key={lbl}>
+                <div style={{display:"flex",alignItems:"center",gap:5}}>
+                  <div style={{
+                    width:26,height:26,borderRadius:"50%",flexShrink:0,
+                    background: i+1 < steg ? C.green : i+1 === steg ? `linear-gradient(135deg,${C.navy},${C.navyMid})` : C.section,
+                    color: i+1 <= steg ? C.white : C.muted,
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    fontSize:"0.78rem",fontWeight:800,
+                  }}>{i+1 < steg ? "✓" : i+1}</div>
+                  <span style={{fontSize:"0.76rem",fontWeight:i+1===steg?700:400,color:i+1===steg?C.navyDark:C.muted,whiteSpace:"nowrap"}}>{lbl}</span>
+                </div>
+                {i < 2 && <div style={{width:24,height:2,background:i+1<steg?C.green:C.border,flexShrink:0}}/>}
+              </React.Fragment>
+            ))}
+          </div>
+        )}
+
+        {/* ── STEG 1: Tiltaksvalg ── */}
+        {steg === 1 && (
+          <>
+            <div style={S.card}>
+              <div style={S.tag}>Steg 1 av 2</div>
+              <div style={S.h2}>Velg dine tiltak</div>
+              <div style={{...S.sub,marginBottom:16}}>Vi har forhåndsvalgt de mest lønnsomme tiltakene for din bolig</div>
+              <div style={{display:"flex",gap:8,marginBottom:16}}>
+                <button style={{...S.btnG,fontSize:"0.78rem",padding:"6px 14px"}} onClick={() => setValgte(new Set(resultat.tiltak.map(t => t.id)))}>Velg alle</button>
+                <button style={{...S.btnG,fontSize:"0.78rem",padding:"6px 14px"}} onClick={() => setValgte(new Set())}>Fjern alle</button>
+              </div>
+              {resultat.tiltak.map(t => {
+                const erValgt = valgte.has(t.id);
+                return (
+                  <div key={t.id} onClick={() => toggleTiltak(t.id)} style={{
+                    display:"flex",gap:12,alignItems:"flex-start",padding:"14px 16px",
+                    borderRadius:14,marginBottom:10,cursor:"pointer",transition:"all .15s",
+                    border:`1.5px solid ${erValgt ? C.green+"60" : C.border}`,
+                    background: erValgt ? `${C.green}08` : C.white,
+                  }}>
+                    <div style={{
+                      width:22,height:22,borderRadius:6,flexShrink:0,marginTop:1,
+                      border:`2px solid ${erValgt ? C.green : "#ccc"}`,
+                      background: erValgt ? C.green : C.white,
+                      display:"flex",alignItems:"center",justifyContent:"center",
+                      color:C.white,fontSize:"0.75rem",fontWeight:900,
+                    }}>{erValgt ? "✓" : ""}</div>
+                    <div style={{flex:1}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:6}}>
+                        <div style={{fontWeight:700,fontSize:"0.9rem",color:C.navyDark}}>{t.ikon} {t.navn}</div>
+                        {t.prioritet==="høy"    && <span style={{background:C.green,color:C.white,borderRadius:100,padding:"2px 9px",fontSize:"0.65rem",fontWeight:800,whiteSpace:"nowrap",flexShrink:0}}>Anbefalt</span>}
+                        {t.prioritet==="middels"&& <span style={{background:C.gold,color:C.white,borderRadius:100,padding:"2px 9px",fontSize:"0.65rem",fontWeight:800,whiteSpace:"nowrap",flexShrink:0}}>Vurder</span>}
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                        <div style={{background:C.section,borderRadius:8,padding:"7px 10px"}}>
+                          <div style={{fontSize:"0.62rem",color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.04em"}}>Est. kostnad</div>
+                          <div style={{fontSize:"0.8rem",fontWeight:800,color:C.navyDark}}>{Math.round(t.kostnad_min/1000)}–{Math.round(t.kostnad_max/1000)}k kr</div>
+                        </div>
+                        <div style={{background:C.section,borderRadius:8,padding:"7px 10px"}}>
+                          <div style={{fontSize:"0.62rem",color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.04em"}}>Årsbesparelse</div>
+                          <div style={{fontSize:"0.8rem",fontWeight:800,color:C.green}}>~{t.besparelse_kr.toLocaleString("no")} kr</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              style={{...S.btnP,background:valgte.size===0?"#bbb":`linear-gradient(135deg,${C.navy},${C.navyMid})`,marginBottom:16}}
+              onClick={() => valgte.size > 0 && setSteg(2)}
+              disabled={valgte.size === 0}
+            >
+              Se sammenligning ({valgte.size} valgt) →
+            </button>
+          </>
+        )}
+
+        {/* ── STEG 2: Kombinasjonssammenligning ── */}
+        {steg === 2 && (
+          <>
+            <div style={S.card}>
+              <div style={S.tag}>Steg 2 av 2</div>
+              <div style={S.h2}>Din kombinasjonsanalyse</div>
+              <div style={{...S.sub,marginBottom:16}}>{valgte.size} tiltak valgt</div>
+              <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,borderRadius:14,padding:"18px",marginBottom:16}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+                  {[
+                    {l:"Total årsbesparelse",v:`${totBes.toLocaleString("no")} kr`,c:C.greenLight},
+                    {l:"Tilbakebetalingstid", v:`${breakEven}${typeof breakEven==="number"?" år":""}`,c:C.white},
+                    {l:"Total Enova-støtte",  v:`${Math.round(totStøtte/1000)} 000 kr`,c:C.greenLight},
+                    {l:"Netto kostnad",       v:`${Math.round(netto/1000)} 000 kr`,c:"rgba(255,255,255,0.8)"},
+                  ].map(x=>(
+                    <div key={x.l}>
+                      <div style={{fontSize:"0.65rem",color:"rgba(255,255,255,0.5)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:3}}>{x.l}</div>
+                      <div style={{fontSize:"1.1rem",fontWeight:900,color:x.c}}>{x.v}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{borderTop:"1px solid rgba(255,255,255,0.15)",paddingTop:12}}>
+                  <div style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.5)",marginBottom:2}}>Besparelse over 10 år</div>
+                  <div style={{fontSize:"1.3rem",fontWeight:900,color:C.greenLight}}>{(totBes*10).toLocaleString("no")} kr</div>
+                </div>
+              </div>
+              <div style={{fontWeight:700,fontSize:"0.82rem",color:C.navyDark,marginBottom:10}}>Enova-støtte per tiltak</div>
+              {valgTiltak.map(t => (
+                <div key={t.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderBottom:`1px solid ${C.section}`}}>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:"0.85rem",color:C.navyDark}}>{t.ikon} {t.navn}</div>
+                    <div style={{fontSize:"0.74rem",color:C.muted}}>~{t.besparelse_kr.toLocaleString("no")} kr/år · {t.tilbakebetaling<=30?`${t.tilbakebetaling} år tilbakebetaling`:"Lang sikt"}</div>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{fontSize:"0.67rem",color:C.muted}}>Enova inntil</div>
+                    <div style={{fontWeight:800,color:C.green,fontSize:"0.9rem"}}>{(t.støtte_max/1000).toFixed(0)}k kr</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {feil && <div style={{background:"#fff0f0",border:"1px solid #fcc",borderRadius:10,padding:"12px 14px",fontSize:"0.83rem",color:"#c53030",marginBottom:12}}>{feil}</div>}
+            <button
+              style={{...S.btnP,background:sender?"#aaa":`linear-gradient(135deg,${C.green},${C.greenLight})`,boxShadow:`0 6px 20px ${C.green}44`,marginBottom:10,opacity:sender?0.7:1}}
+              onClick={sendRapport}
+              disabled={sender}
+            >
+              {sender ? "Genererer rapport…" : `Generer og send rapport til ${epost} →`}
+            </button>
+            <button style={{...S.btnG,width:"100%",textAlign:"center"}} onClick={() => setSteg(1)}>← Endre valg</button>
+          </>
+        )}
+
+        {/* ── STEG 3: Bekreftelse ── */}
+        {steg === 3 && (
+          <div style={S.card}>
+            <div style={{textAlign:"center",padding:"24px 16px"}}>
+              <div style={{fontSize:"3rem",marginBottom:12}}>✅</div>
+              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:800,fontSize:"1.4rem",color:C.navyDark,marginBottom:8}}>Rapporten er sendt!</div>
+              <div style={{fontSize:"0.88rem",color:C.muted,lineHeight:1.7,marginBottom:24}}>
+                Din Oppgraderingsplan med {valgte.size} tiltak er sendt til <strong>{epost}</strong>.<br/>
+                Sjekk innboksen din – rapporten er klar til bruk.
+              </div>
+              <div style={{display:"grid",gap:10,marginBottom:24}}>
+                {[
+                  {ikon:"📋",tekst:"Søknadstekst for Enova ligger klar i PDF-en"},
+                  {ikon:"💰",tekst:"Finansieringstips og grønne boliglån er inkludert"},
+                  {ikon:"🔨",tekst:"Husk: søk Enova-støtte FØR du bestiller håndverker"},
+                ].map(x=>(
+                  <div key={x.ikon} style={{display:"flex",gap:10,alignItems:"center",padding:"10px 13px",background:C.section,borderRadius:10,textAlign:"left"}}>
+                    <span style={{fontSize:"1.1rem",flexShrink:0}}>{x.ikon}</span>
+                    <span style={{fontSize:"0.8rem",color:C.navyDark,fontWeight:600}}>{x.tekst}</span>
+                  </div>
+                ))}
+              </div>
+              <button onClick={onNullstill} style={S.btnG}>Analyser en annen bolig →</button>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // FULL RAPPORT
 // ─────────────────────────────────────────────
 const ENOVA_DOCS = {
@@ -1189,6 +1407,7 @@ export default function App() {
   const [pakke, setPakke]           = useState("energirapport");
   const [pdfSendt, setPdfSendt]     = useState(false);
   const [modal, setModal]           = useState(null);
+  const [sessionId, setSessionId]   = useState(null);
 
   // Håndter Stripe-redirect tilbake til appen
   useEffect(() => {
@@ -1204,25 +1423,32 @@ export default function App() {
 
     console.log("[REDIRECT] Gjenoppretter rapport – pakke:", lagret.pakke, "| e-post:", lagret.epost);
 
+    const valgtPakke = lagret.pakke || "energirapport";
+
     setResultat(lagret.resultat);
     setInput(lagret.input);
     setEpost(lagret.epost || "");
-    setPakke(lagret.pakke || "energirapport");
+    setPakke(valgtPakke);
+    setSessionId(sessionId);
     setBetalt(true);
     setSkjerm("resultat");
 
     window.history.replaceState({}, "", "/");
 
-    fetch(`${BACKEND}/api/send-rapport`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        session_id:   sessionId,
-        resultatData: lagret,
-        epost:        lagret.epost,
-        pakke:        lagret.pakke || "energirapport",
-      }),
-    }).then(() => setPdfSendt(true)).catch(console.error);
+    // Oppgraderingsplan: brukeren velger tiltak selv før PDF sendes
+    // Energirapport: send PDF med en gang
+    if (valgtPakke !== "oppgraderingsplan") {
+      fetch(`${BACKEND}/api/send-rapport`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id:   sessionId,
+          resultatData: lagret,
+          epost:        lagret.epost,
+          pakke:        valgtPakke,
+        }),
+      }).then(() => setPdfSendt(true)).catch(console.error);
+    }
   }, []);
 
   function lagOgVis(inp) {
@@ -1243,12 +1469,17 @@ export default function App() {
 
   function nullstill() {
     setSkjerm("start"); setSteg(0); setSvar({}); setOppvarmingValg([]);
-    setResultat(null); setInput(null); setBetalt(false); setPakke("energirapport"); setPdfSendt(false);
+    setResultat(null); setInput(null); setBetalt(false); setPakke("energirapport"); setPdfSendt(false); setSessionId(null);
   }
 
   // Resultat-skjerm
   if (skjerm === "resultat" && resultat) {
-    if (betalt) return <><FullRapport resultat={resultat} epost={epost} pdfSendt={pdfSendt} pakke={pakke} onNullstill={nullstill}/><Chatbot/></>;
+    if (betalt) {
+      if (pakke === "oppgraderingsplan") {
+        return <><OppgraderingsFlow resultat={resultat} epost={epost} input={input} sessionId={sessionId} onNullstill={nullstill}/><Chatbot/></>;
+      }
+      return <><FullRapport resultat={resultat} epost={epost} pdfSendt={pdfSendt} pakke={pakke} onNullstill={nullstill}/><Chatbot/></>;
+    }
     return <><Betalingsmur resultat={resultat} input={input} onBetalt={(e, p) => { setEpost(e); setPakke(p); setBetalt(true); }} onNullstill={nullstill}/><Chatbot/></>;
   }
 
