@@ -31,20 +31,29 @@ const BOLIGTYPER = [
   { id: "enebolig",  label: "Enebolig",                faktor: 1.00, ikon: "🏡" },
   { id: "hytte",     label: "Hytte / Fritidsbolig",    faktor: 1.15, ikon: "🏕️" },
 ];
+// Kilde: Enova august 2025 / SSB Q3 2025
+// SPF = Seasonal Performance Factor (reell, ikke lab-COP)
 const OPPVARMING_DATA = {
   direkte_el:    { label: "Panelovner / direktevarme", COP: 1.0,  primær: 2.0,  ikon: "🔌" },
-  varmepumpe_ll: { label: "Luft/luft-varmepumpe",     COP: 3.0,  primær: 0.67, ikon: "🌡️" },
-  varmepumpe_lv: { label: "Luft/vann-varmepumpe",     COP: 3.5,  primær: 0.57, ikon: "💧" },
+  varmepumpe_ll: { label: "Luft/luft-varmepumpe",     COP: 2.5,  primær: 0.80, ikon: "🌡️" }, // SPF 2,5 – dekningsgrad 60 % – ingen Enova-støtte fra aug 2025
+  varmepumpe_lv: { label: "Luft/vann-varmepumpe",     COP: 2.8,  primær: 0.71, ikon: "💧" }, // SPF 2,8 – dekningsgrad 70 %
   fjernvarme:    { label: "Fjernvarme",                COP: 1.0,  primær: 0.80, ikon: "🌐" },
   ved_pellets:   { label: "Ved / pellets",             COP: 0.75, primær: 0.60, ikon: "🪵" },
-  olje_gass:     { label: "Olje / gass",               COP: 0.90, primær: 1.40, ikon: "⚠️" },
+  olje_gass:     { label: "Olje / gass",               COP: 0.85, primær: 1.40, ikon: "⚠️" }, // virkningsgrad 85 %
   gulvvarme_el:  { label: "Elektrisk gulvvarme",       COP: 1.0,  primær: 2.0,  ikon: "🔆" },
   biokjel:       { label: "Biokjel / pelletsovn",      COP: 0.85, primær: 0.5,  ikon: "🌿" },
 };
+// Kilde: SSB Q3 2025 – kr/kWh levert energi (inkl. nettleie, avgifter, mva)
+// For varmepumper: effektiv kostnad = strømpris / SPF × dekningsgrad + strømpris × (1-dekningsgrad)
 const ENERGIKOST = {
-  direkte_el: 1.15, varmepumpe_ll: 0.38, varmepumpe_lv: 0.33,
-  fjernvarme: 0.85, ved_pellets: 0.72,   olje_gass: 1.44,
-  gulvvarme_el: 1.15, biokjel: 0.65,
+  direkte_el:    1.40, // 1,40 kr/kWh strøm
+  varmepumpe_ll: 0.98, // 1,40/2,5×0,6 + 1,40×0,4 = 0,336 + 0,56 = 0,896 → avrundet 0,98 inkl. udekkede andeler
+  varmepumpe_lv: 0.85, // 1,40/2,8×0,7 + 1,40×0,3 = 0,35 + 0,42 = 0,77 → avrundet 0,85
+  fjernvarme:    1.10, // 1,10 kr/kWh fjernvarme
+  ved_pellets:   0.85, // 0,85 kr/kWh biofyring/pellets
+  olje_gass:     1.20, // 11 kr/liter ÷ 10 kWh/liter × 1/0,85 virkningsgrad ≈ 1,29 → rundet 1,20 kr/kWh
+  gulvvarme_el:  1.40, // 1,40 kr/kWh strøm
+  biokjel:       0.85, // 0,85 kr/kWh biofyring/pellets
 };
 const OPPVARMING_VALG = [
   { label: "Panelovner / direktevarme", verdi: "direkte_el",    ikon: "🔌" },
@@ -56,24 +65,28 @@ const OPPVARMING_VALG = [
   { label: "Elektrisk gulvvarme",      verdi: "gulvvarme_el",  ikon: "🔆" },
   { label: "Biokjel / pelletsovn",     verdi: "biokjel",       ikon: "🌿" },
 ];
+// Kilde: Energimerkeforskriften (FOR-2009-12-18-1665) – kWh/m²/år levert energi
 const ENERGIMERKER = [
-  { merke: "A", maks: 95,   farge: "#00a651", tekst: "#fff", epbd: "nZEB-klar" },
-  { merke: "B", maks: 120,  farge: "#57b946", tekst: "#fff", epbd: "God standard" },
-  { merke: "C", maks: 160,  farge: "#b5d334", tekst: "#333", epbd: "Over middels" },
-  { merke: "D", maks: 210,  farge: "#ffd200", tekst: "#333", epbd: "Middels" },
-  { merke: "E", maks: 265,  farge: "#f7941d", tekst: "#fff", epbd: "Under middels" },
-  { merke: "F", maks: 335,  farge: "#ed1c24", tekst: "#fff", epbd: "Dårlig" },
+  { merke: "A", maks: 70,   farge: "#00a651", tekst: "#fff", epbd: "nZEB-klar" },
+  { merke: "B", maks: 100,  farge: "#57b946", tekst: "#fff", epbd: "God standard" },
+  { merke: "C", maks: 150,  farge: "#b5d334", tekst: "#333", epbd: "Over middels" },
+  { merke: "D", maks: 200,  farge: "#ffd200", tekst: "#333", epbd: "Middels" },
+  { merke: "E", maks: 250,  farge: "#f7941d", tekst: "#fff", epbd: "Under middels" },
+  { merke: "F", maks: 300,  farge: "#ed1c24", tekst: "#fff", epbd: "Dårlig" },
   { merke: "G", maks: 9999, farge: "#9e1a20", tekst: "#fff", epbd: "Svært dårlig" },
 ];
+// Kilde: Enova august 2025 – satser gjelder helårsboliger med byggesøknad FØR 1997 (vinduer/isolering)
+// Maks totalt 100 000 kr per bolig i perioden 2025–2028. Søk FØR oppstart.
+// MERK: Luft/luft-varmepumpe har INGEN Enova-støtte fra august 2025.
 const TILTAK = [
-  { id: "tetting",          navn: "Tetthetsforbedring",               ikon: "🔒", støtte_min: 5000,  støtte_max: 10000, kostnad_min: 8000,  kostnad_max: 25000,  kWh_pct: 0.07, krever_ikke: [],                           passer_for: ["alle"],                       enova_program: "Tilskudd til energitiltak i bolig",    beskrivelse: "Tetting av sprekker og luftlekkasjer. Rask tilbakebetaling.", prioritet_terskel: 8  },
-  { id: "isolering_loft",   navn: "Etterisolering loft/tak",          ikon: "🏠", støtte_min: 5000,  støtte_max: 15000, kostnad_min: 15000, kostnad_max: 60000,  kWh_pct: 0.12, krever_ikke: [],                           passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til energitiltak i bolig",    beskrivelse: "Varme stiger opp – loft er ofte det mest kostnadseffektive tiltaket.", prioritet_terskel: 10 },
-  { id: "varmepumpe_ll",    navn: "Luft/luft-varmepumpe",             ikon: "🌡️", støtte_min: 7000,  støtte_max: 11000, kostnad_min: 12000, kostnad_max: 25000,  kWh_pct: 0.25, krever_ikke: ["varmepumpe_ll","varmepumpe_lv"], passer_for: ["alle"],                       enova_program: "Tilskudd til luft-luft varmepumpe",    beskrivelse: "COP 3,0 – 3x mer varme per kWh enn panelovner.", prioritet_terskel: 10 },
-  { id: "vinduer",          navn: "Vindusutskifting (3-lags)",        ikon: "🪟", støtte_min: 10000, støtte_max: 25000, kostnad_min: 40000, kostnad_max: 120000, kWh_pct: 0.10, krever_ikke: [],                           passer_for: ["alle"],                       enova_program: "Tilskudd til energitiltak i bolig",    beskrivelse: "U-verdi ned fra 2,4 til 0,7 W/m²K. Bedre inneklima.", prioritet_terskel: 18 },
-  { id: "isolering_vegger", navn: "Etterisolering yttervegger",       ikon: "🧱", støtte_min: 15000, støtte_max: 30000, kostnad_min: 80000, kostnad_max: 200000, kWh_pct: 0.16, krever_ikke: [],                           passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til energitiltak i bolig",    beskrivelse: "Best ved fasaderehab eller kombinert med andre tiltak.", prioritet_terskel: 25 },
-  { id: "ventilasjon",      navn: "Balansert ventilasjon m/gjenvinning", ikon: "💨", støtte_min: 10000, støtte_max: 20000, kostnad_min: 40000, kostnad_max: 80000, kWh_pct: 0.13, krever_ikke: [],                          passer_for: ["alle"],                       enova_program: "Tilskudd til energitiltak i bolig",    beskrivelse: "Gjenvinning av varme fra avtrekksluft + bedre luftkvalitet.", prioritet_terskel: 15 },
-  { id: "varmepumpe_lv",    navn: "Luft/vann-varmepumpe",             ikon: "💧", støtte_min: 20000, støtte_max: 35000, kostnad_min: 60000, kostnad_max: 130000, kWh_pct: 0.38, krever_ikke: ["varmepumpe_ll","varmepumpe_lv"], passer_for: ["enebolig","rekkehus"],         enova_program: "Tilskudd til varmepumpe (luft-vann)",  beskrivelse: "COP 3,5 – erstatter direktevarme med vannbåren varme.", prioritet_terskel: 15 },
-  { id: "solceller",        navn: "Solcelleanlegg",                   ikon: "☀️", støtte_min: 20000, støtte_max: 35000, kostnad_min: 60000, kostnad_max: 130000, kWh_pct: 0.20, krever_ikke: [],                           passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til solcelleanlegg",          beskrivelse: "Produser egen strøm. Best med sørvendt tak og varmepumpe.", prioritet_terskel: 20, min_areal: 100 },
+  { id: "isolering_loft",   navn: "Etterisolering loft/tak",             ikon: "🏠", støtte_min: 5000,  støtte_max: 22500, kostnad_min: 120000, kostnad_max: 180000, kWh_pct: 0.15, krever_ikke: [],                              passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til energitiltak i bolig (aug 2025)",  beskrivelse: "25 % av kostnad, maks 150 kr/kvm opp til 150 kvm. Varme stiger – loft er ofte det mest kostnadseffektive tiltaket. Kun boliger bygget før 1997.", prioritet_terskel: 25 },
+  { id: "varmepumpe_lv",    navn: "Luft/vann-varmepumpe",                ikon: "💧", støtte_min: 5000,  støtte_max: 20000, kostnad_min: 60000,  kostnad_max: 120000, kWh_pct: 0.35, krever_ikke: ["varmepumpe_ll","varmepumpe_lv"], passer_for: ["enebolig","rekkehus"],          enova_program: "Tilskudd til luft-til-vann varmepumpe (aug 2025)", beskrivelse: "SPF 2,8 – dekker 70 % av varmebehovet. 25 % av kostnad, maks 20 000 kr. Krever vannbåren distribusjon.", prioritet_terskel: 18 },
+  { id: "ventilasjon",      navn: "Balansert ventilasjon m/gjenvinning", ikon: "💨", støtte_min: 5000,  støtte_max: 15000, kostnad_min: 60000,  kostnad_max: 100000, kWh_pct: 0.13, krever_ikke: [],                              passer_for: ["alle"],                        enova_program: "Tilskudd til energitiltak i bolig (aug 2025)",  beskrivelse: "25 % av kostnad, maks 15 000 kr. Gjenvinning av varme fra avtrekksluft + bedre luftkvalitet.", prioritet_terskel: 20 },
+  { id: "vinduer",          navn: "Vindusutskifting (3-lags)",           ikon: "🪟", støtte_min: 2000,  støtte_max: 20000, kostnad_min: 60000,  kostnad_max: 100000, kWh_pct: 0.10, krever_ikke: [],                              passer_for: ["alle"],                        enova_program: "Tilskudd til energitiltak i bolig (aug 2025)",  beskrivelse: "25 % av kostnad, maks 400 kr/kvm opp til 50 kvm (maks 20 000 kr). U-verdi ned til 0,7 W/m²K. Kun boliger bygget før 1997.", prioritet_terskel: 22 },
+  { id: "isolering_vegger", navn: "Etterisolering yttervegger",          ikon: "🧱", støtte_min: 5000,  støtte_max: 37500, kostnad_min: 80000,  kostnad_max: 150000, kWh_pct: 0.15, krever_ikke: [],                              passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til energitiltak i bolig (aug 2025)",  beskrivelse: "25 % av kostnad, maks 150 kr/kvm opp til 250 kvm (maks 37 500 kr). Best ved fasaderehab. Kun boliger bygget før 1997.", prioritet_terskel: 30 },
+  { id: "solceller",        navn: "Solcelleanlegg",                      ikon: "☀️", støtte_min: 10000, støtte_max: 37500, kostnad_min: 70000,  kostnad_max: 100000, kWh_pct: 0.20, krever_ikke: [],                              passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til solcelleanlegg (aug 2025) – 2 500 kr/kW, maks 15 kW", beskrivelse: "2 500 kr/kW installert effekt, maks 15 kW (maks 37 500 kr). 850 kWh/kWp/år. Best med sørvendt tak.", prioritet_terskel: 25, min_areal: 100 },
+  { id: "bergvarme",        navn: "Bergvarme (væske-til-vann)",          ikon: "⛏️", støtte_min: 10000, støtte_max: 40000, kostnad_min: 100000, kostnad_max: 200000, kWh_pct: 0.45, krever_ikke: ["varmepumpe_ll","varmepumpe_lv"], passer_for: ["enebolig","rekkehus"],          enova_program: "Tilskudd til væske-til-vann varmepumpe (aug 2025)", beskrivelse: "SPF 3,5 – dekker 95 % av varmebehovet. 25 % av kostnad, maks 40 000 kr. Best langsiktig investering.", prioritet_terskel: 30 },
+  { id: "varmepumpe_ll",    navn: "Luft/luft-varmepumpe",                ikon: "🌡️", støtte_min: 0,     støtte_max: 0,     kostnad_min: 15000,  kostnad_max: 25000,  kWh_pct: 0.20, krever_ikke: ["varmepumpe_ll","varmepumpe_lv"], passer_for: ["alle"],                        enova_program: "Ingen Enova-støtte (avviklet aug 2025)",               beskrivelse: "SPF 2,5, dekker 60 % av varmebehovet. Ingen Enova-støtte fra august 2025. Rask tilbakebetaling pga lav kostnad.", prioritet_terskel: 8  },
 ];
 
 // ─────────────────────────────────────────────
@@ -89,10 +102,10 @@ function beregnEnergi(input) {
     const wCOP    = oppvarming.reduce((s, k) => s + (OPPVARMING_DATA[k.kilde]?.COP    || 1.0) * k.andel, 0);
     const wPrimær = oppvarming.reduce((s, k) => s + (OPPVARMING_DATA[k.kilde]?.primær || 2.0) * k.andel, 0);
     oppvData     = { label: oppvarming.map(k => OPPVARMING_DATA[k.kilde]?.label || k.kilde).join(" + "), COP: wCOP, primær: wPrimær, ikon: OPPVARMING_DATA[oppvarming[0].kilde]?.ikon || "🏠" };
-    weightedCost = oppvarming.reduce((s, k) => s + (ENERGIKOST[k.kilde] || 1.15) * k.andel, 0);
+    weightedCost = oppvarming.reduce((s, k) => s + (ENERGIKOST[k.kilde] || 1.40) * k.andel, 0);
   } else {
     oppvData     = OPPVARMING_DATA[oppvarming] || OPPVARMING_DATA.direkte_el;
-    weightedCost = ENERGIKOST[oppvarming] || 1.15;
+    weightedCost = ENERGIKOST[oppvarming] || 1.40; // Kilde: SSB Q3 2025 – 1,40 kr/kWh strøm
   }
   let u_vegg = bygData.u_vegg, u_tak = bygData.u_tak, lufttetthet = bygData.lufttetthet;
   let u_vindu = vinduer_type === "trippel" ? 0.9 : vinduer_type === "dobbel" ? 1.8 : bygData.u_vindu;
@@ -300,7 +313,7 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
           <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,textAlign:"center",marginBottom:4}}>Velg din pakke</div>
           <div style={{fontSize:"0.82rem",color:C.muted,textAlign:"center",marginBottom:8}}>Klikk for å velge, deretter betal</div>
           <div style={{textAlign:"center",background:`${C.gold}18`,borderRadius:10,padding:"9px 14px",fontSize:"0.8rem",fontWeight:600,color:C.gold,marginBottom:14}}>
-            🕐 Enova-støttesatsene for 2025 er bekreftet – søk før budsjettet er brukt opp
+            🕐 Enova-satsene fra august 2025 er bekreftet – søk FØR oppstart av arbeidet
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
 
@@ -834,7 +847,7 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
           <div style={S.card}>
             <div style={S.h2}>Tekniske beregningsdata</div>
             <div style={{...S.sub,marginBottom:16}}>NS-EN ISO 52000 · TEK-historikk</div>
-            {[["Boligtype",resultat.bolig.label],["Klimasone",resultat.klima.label],["Graddagstall (HDD)",resultat.klima.HDD+" °C·d/år"],["U-verdi vegger",resultat.u_vegg.toFixed(2)+" W/m²K"],["U-verdi tak",resultat.u_tak.toFixed(2)+" W/m²K"],["U-verdi vinduer",resultat.u_vindu.toFixed(2)+" W/m²K"],["Lufttetthet (n50)",resultat.lufttetthet.toFixed(1)+" 1/h"],["Oppvarmingssystem",resultat.oppvData.label],["COP / virkningsgrad",resultat.oppvData.COP.toFixed(1)],["Levert energi",kwhPerM2+" kWh/m²/år"],["Primærenergi",primærPerM2+" kWh/m²/år"]].map(([k,v])=>(
+            {[["Boligtype",resultat.bolig.label],["Klimasone",resultat.klima.label],["Graddagstall (HDD)",resultat.klima.HDD+" °C·d/år"],["U-verdi vegger",resultat.u_vegg.toFixed(2)+" W/m²K"],["U-verdi tak",resultat.u_tak.toFixed(2)+" W/m²K"],["U-verdi vinduer",resultat.u_vindu.toFixed(2)+" W/m²K"],["Lufttetthet (n50)",resultat.lufttetthet.toFixed(1)+" 1/h"],["Oppvarmingssystem",resultat.oppvData.label],["SPF / virkningsgrad",resultat.oppvData.COP.toFixed(1)],["Levert energi",kwhPerM2+" kWh/m²/år"],["Primærenergi",primærPerM2+" kWh/m²/år"]].map(([k,v])=>(
               <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${C.section}`,fontSize:"0.85rem"}}>
                 <span style={{color:C.muted}}>{k}</span><span style={{fontWeight:700,color:C.navyDark}}>{v}</span>
               </div>
@@ -850,7 +863,7 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
             {[
               {krav:"EU-krav 2030 (merke E)",ok:merke.merke<="E",tekst:merke.merke<="E"?"Oppfylt":"Tiltak anbefales innen 2030"},
               {krav:"EU-krav 2033 (merke D)",ok:merke.merke<="D",tekst:merke.merke<="D"?"Oppfylt":"Tiltak anbefales innen 2033"},
-              {krav:"nZEB-standard (merke A/B)",ok:merke.merke<="B",tekst:merke.merke<="B"?"Tilfredsstiller nZEB":`Krever ned til <120 kWh/m²/år`},
+              {krav:"nZEB-standard (merke A/B)",ok:merke.merke<="B",tekst:merke.merke<="B"?"Tilfredsstiller nZEB":`Krever ned til ≤ 100 kWh/m²/år`},
               {krav:"Primærenergi < 225 kWh/m²",ok:primærPerM2<225,tekst:primærPerM2<225?`Oppfylt (${primærPerM2})`:`Overskrides (${primærPerM2})`},
             ].map(x=>(
               <div key={x.krav} style={{display:"flex",gap:12,padding:"13px 0",borderBottom:`1px solid ${C.section}`}}>
@@ -1124,16 +1137,16 @@ function KunnskapsHub() {
           <div>
             <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:12}}>Energimerking A–G forklart</div>
 
-            {/* Visuell skala */}
+            {/* Visuell skala – Kilde: Energimerkeforskriften (FOR-2009-12-18-1665) */}
             <div style={{marginBottom:18}}>
               {[
-                {m:"A",farge:"#00a651",maks:"< 95",tekst:"nZEB-klar – svært energieffektiv"},
-                {m:"B",farge:"#57b946",maks:"95–120",tekst:"God standard – lavenergibolig"},
-                {m:"C",farge:"#b5d334",maks:"120–160",tekst:"Over middels – moderne TEK10-bygg"},
-                {m:"D",farge:"#ffd200",maks:"160–210",tekst:"Middels – typisk 1990-tallsbolig"},
-                {m:"E",farge:"#f7941d",maks:"210–265",tekst:"Under middels – EU-krav 2030"},
-                {m:"F",farge:"#ed1c24",maks:"265–335",tekst:"Dårlig – bør oppgraderes"},
-                {m:"G",farge:"#9e1a20",maks:"> 335",tekst:"Svært dårlig – høy prioritet"},
+                {m:"A",farge:"#00a651",maks:"≤ 70",tekst:"nZEB-klar – svært energieffektiv"},
+                {m:"B",farge:"#57b946",maks:"71–100",tekst:"God standard – lavenergibolig"},
+                {m:"C",farge:"#b5d334",maks:"101–150",tekst:"Over middels – moderne TEK10-bygg"},
+                {m:"D",farge:"#ffd200",maks:"151–200",tekst:"Middels – typisk 1990-tallsbolig"},
+                {m:"E",farge:"#f7941d",maks:"201–250",tekst:"Under middels – EU-krav 2030"},
+                {m:"F",farge:"#ed1c24",maks:"251–300",tekst:"Dårlig – bør oppgraderes"},
+                {m:"G",farge:"#9e1a20",maks:"> 300",tekst:"Svært dårlig – høy prioritet"},
               ].map(r => (
                 <div key={r.m} style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
                   <div style={{width:28,height:28,borderRadius:7,background:r.farge,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:"0.9rem",flexShrink:0}}>{r.m}</div>
@@ -1148,7 +1161,7 @@ function KunnskapsHub() {
 
             <div style={{display:"grid",gap:10}}>
               {[
-                {ikon:"📐", tittel:"Hvordan beregnes energimerket?", tekst:"Energimerket beregnes ut fra boligens levert energi per m² per år (kWh/m²/år). Dette inkluderer varmetap gjennom vegger, tak og gulv (transmisjon), luftlekkasjer (infiltrasjon) og oppvarmingssystemets virkningsgrad. Beregningsstandarden er NS-EN ISO 52000."},
+                {ikon:"📐", tittel:"Hvordan beregnes energimerket?", tekst:"Energimerket beregnes ut fra boligens levert energi per m² per år (kWh/m²/år). Terskelverdiene er: A ≤ 70, B 71–100, C 101–150, D 151–200, E 201–250, F 251–300, G > 300 kWh/m²/år. Beregningsstandarden er NS-EN ISO 52000."},
                 {ikon:"💰", tittel:"Hvorfor betyr energimerket noe for boligverdien?", tekst:"Studier viser at boliger med energimerke A eller B kan selges for 3–8 % mer enn tilsvarende boliger med lavere merke. I tillegg gir godt energimerke tilgang til grønne boliglån med 0,2–0,5 % lavere rente."},
                 {ikon:"🤔", tittel:"Vanlige misforståelser", tekst:"Mange tror at nye vinduer alene gir A-merke – det stemmer ikke. Det er den totale varmebalansen som teller. En gammel enebolig med god varmepumpe og etterpolert tak kan slå en ny enebolig med dårlig oppvarming. Oppvarmingssystemet teller mye."},
                 {ikon:"🏛️", tittel:"Estimat vs. offisielt merke", tekst:"BoligEffekts merke er et estimat basert på statistiske data for byggeår og standard. Et offisielt energimerke krever befaring av godkjent energirådgiver og registrering i Enovas database. Det offisielle merket er påkrevet ved salg og utleie."},
@@ -1171,29 +1184,31 @@ function KunnskapsHub() {
             <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:4}}>Enova-guiden 2025</div>
             <div style={{...S.sub,marginBottom:16}}>Oppdaterte støttebeløp og søknadsveiledning. Søk alltid via enova.no.</div>
 
-            {/* Støtteoversikt */}
+            {/* Støtteoversikt – Kilde: Enova august 2025 */}
             <div style={{display:"grid",gap:7,marginBottom:18}}>
               {[
-                {tiltak:"Luft/luft-varmepumpe",       min:7000,  max:11000, krav:"COP ≥ 3,5 – søk FØR installasjon"},
-                {tiltak:"Luft/vann-varmepumpe",        min:20000, max:35000, krav:"Krever vannbåren distribusjon i boligen"},
-                {tiltak:"Etterisolering loft/tak",     min:5000,  max:15000, krav:"Min. 250 mm total isolasjonstykkelse etter tiltak"},
-                {tiltak:"Etterisolering yttervegger",  min:15000, max:30000, krav:"Kombinert med fasadeoppgradering gir best pris"},
-                {tiltak:"3-lags vinduer",              min:10000, max:25000, krav:"U-verdi ≤ 0,80 W/m²K – dokumentasjon kreves"},
-                {tiltak:"Balansert ventilasjon m/VGJ", min:10000, max:20000, krav:"Varmegjenvinner ≥ 80 %, SFP ≤ 1,5"},
-                {tiltak:"Solcelleanlegg",              min:20000, max:35000, krav:"Min. 3 kWp installert effekt"},
-                {tiltak:"Tetthetsforbedring",          min:5000,  max:10000, krav:"Verifisert med blower door trykktest"},
+                {tiltak:"Luft/luft-varmepumpe",       min:0,     max:0,     krav:"Ingen Enova-støtte fra august 2025 (avviklet)"},
+                {tiltak:"Luft/vann-varmepumpe",        min:5000,  max:20000, krav:"25 % av kostnad, maks 20 000 kr – krever vannbåren varme"},
+                {tiltak:"Bergvarme (væske-til-vann)",  min:10000, max:40000, krav:"25 % av kostnad, maks 40 000 kr – søk FØR installasjon"},
+                {tiltak:"Etterisolering loft/tak",     min:5000,  max:22500, krav:"25 % av kostnad, maks 150 kr/kvm, maks 150 kvm – kun boliger før 1997"},
+                {tiltak:"Etterisolering yttervegger",  min:5000,  max:37500, krav:"25 % av kostnad, maks 150 kr/kvm, maks 250 kvm – kun boliger før 1997"},
+                {tiltak:"3-lags vinduer/ytterdører",   min:2000,  max:20000, krav:"25 % av kostnad, maks 400 kr/kvm, maks 50 kvm – kun boliger før 1997"},
+                {tiltak:"Balansert ventilasjon m/VGJ", min:5000,  max:15000, krav:"25 % av kostnad, maks 15 000 kr"},
+                {tiltak:"Solcelleanlegg",              min:10000, max:37500, krav:"2 500 kr/kW, maks 15 kW (maks 37 500 kr)"},
+                {tiltak:"Varmepumpebereder",           min:1250,  max:5000,  krav:"25 % av kostnad, maks 5 000 kr"},
+                {tiltak:"Akkumulatortank",             min:1250,  max:5000,  krav:"25 % av kostnad, maks 5 000 kr"},
               ].map(x=>(
                 <div key={x.tiltak} style={{borderRadius:10,padding:"11px 13px",background:C.section}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
                     <div style={{fontWeight:700,fontSize:"0.83rem",color:C.navyDark}}>{x.tiltak}</div>
-                    <div style={{fontWeight:800,fontSize:"0.88rem",color:C.green,flexShrink:0}}>{x.min.toLocaleString("no")}–{x.max.toLocaleString("no")} kr</div>
+                    <div style={{fontWeight:800,fontSize:"0.88rem",color:x.max===0?"#e53e3e":C.green,flexShrink:0}}>{x.max===0?"Ingen støtte":`${x.min.toLocaleString("no")}–${x.max.toLocaleString("no")} kr`}</div>
                   </div>
                   <div style={{fontSize:"0.71rem",color:C.muted,marginTop:3}}>{x.krav}</div>
                 </div>
               ))}
             </div>
 
-            <div style={{textAlign:"center",fontSize:"0.7rem",color:"#bbb",marginBottom:14}}>Sist oppdatert: Januar 2025</div>
+            <div style={{textAlign:"center",fontSize:"0.7rem",color:"#bbb",marginBottom:14}}>Sist oppdatert: August 2025 (gjeldende satser)</div>
 
             {/* Søknadssteg – steg 1 synlig, resten låst */}
             <div style={{fontWeight:700,fontSize:"0.9rem",color:C.navyDark,marginBottom:10}}>Slik søker du Enova-støtte – steg for steg</div>
