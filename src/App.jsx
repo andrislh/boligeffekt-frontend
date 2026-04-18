@@ -76,7 +76,7 @@ const ENERGIMERKER = [
 // Maks totalt 100 000 kr per bolig i perioden 2025–2028. Søk FØR oppstart.
 // MERK: Luft/luft-varmepumpe har INGEN Enova-støtte fra august 2025.
 const TILTAK = [
-  { id: "isolering_loft",   navn: "Etterisolering loft/tak",             ikon: "🏠", støtte_min: 5000,  støtte_max: 22500, kostnad_min: 120000, kostnad_max: 180000, kWh_pct: 0.15, krever_ikke: [],                              passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til energitiltak i bolig (aug 2025)",  beskrivelse: "25 % av kostnad, maks 150 kr/kvm opp til 150 kvm. Varme stiger – loft er ofte det mest kostnadseffektive tiltaket. Kun boliger bygget før 1997.", prioritet_terskel: 25 },
+  { id: "isolering_loft",   navn: "Etterisolering loft/tak",             ikon: "🏠", støtte_min: 5000,  støtte_max: 22500, kostnad_min: 30000,  kostnad_max: 100000, kWh_pct: 0.15, krever_ikke: [],                              passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til energitiltak i bolig (aug 2025)",  beskrivelse: "25 % av kostnad, maks 150 kr/kvm opp til 150 kvm. Varme stiger – loft er ofte det mest kostnadseffektive tiltaket. Kun boliger bygget før 1997.", prioritet_terskel: 25 },
   { id: "varmepumpe_lv",    navn: "Luft/vann-varmepumpe",                ikon: "💧", støtte_min: 5000,  støtte_max: 20000, kostnad_min: 60000,  kostnad_max: 120000, kWh_pct: 0.35, krever_ikke: ["varmepumpe_ll","varmepumpe_lv"], passer_for: ["enebolig","rekkehus"],          enova_program: "Tilskudd til luft-til-vann varmepumpe (aug 2025)", beskrivelse: "SPF 2,8 – dekker 70 % av varmebehovet. 25 % av kostnad, maks 20 000 kr. Krever vannbåren distribusjon.", prioritet_terskel: 18 },
   { id: "ventilasjon",      navn: "Balansert ventilasjon m/gjenvinning", ikon: "💨", støtte_min: 5000,  støtte_max: 15000, kostnad_min: 60000,  kostnad_max: 100000, kWh_pct: 0.13, krever_ikke: [],                              passer_for: ["alle"],                        enova_program: "Tilskudd til energitiltak i bolig (aug 2025)",  beskrivelse: "25 % av kostnad, maks 15 000 kr. Gjenvinning av varme fra avtrekksluft + bedre luftkvalitet.", prioritet_terskel: 20 },
   { id: "vinduer",          navn: "Vindusutskifting (3-lags)",           ikon: "🪟", støtte_min: 2000,  støtte_max: 20000, kostnad_min: 60000,  kostnad_max: 100000, kWh_pct: 0.10, krever_ikke: [],                              passer_for: ["alle"],                        enova_program: "Tilskudd til energitiltak i bolig (aug 2025)",  beskrivelse: "25 % av kostnad, maks 400 kr/kvm opp til 50 kvm (maks 20 000 kr). U-verdi ned til 0,7 W/m²K. Kun boliger bygget før 1997.", prioritet_terskel: 22 },
@@ -84,6 +84,7 @@ const TILTAK = [
   { id: "solceller",        navn: "Solcelleanlegg",                      ikon: "☀️", støtte_min: 10000, støtte_max: 37500, kostnad_min: 70000,  kostnad_max: 100000, kWh_pct: 0.20, krever_ikke: [],                              passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til solcelleanlegg (aug 2025) – 2 500 kr/kW, maks 15 kW", beskrivelse: "2 500 kr/kW installert effekt, maks 15 kW (maks 37 500 kr). 850 kWh/kWp/år. Best med sørvendt tak.", prioritet_terskel: 25, min_areal: 100 },
   { id: "bergvarme",        navn: "Bergvarme (væske-til-vann)",          ikon: "⛏️", støtte_min: 10000, støtte_max: 40000, kostnad_min: 100000, kostnad_max: 200000, kWh_pct: 0.45, krever_ikke: ["varmepumpe_ll","varmepumpe_lv"], passer_for: ["enebolig","rekkehus"],          enova_program: "Tilskudd til væske-til-vann varmepumpe (aug 2025)", beskrivelse: "SPF 3,5 – dekker 95 % av varmebehovet. 25 % av kostnad, maks 40 000 kr. Best langsiktig investering.", prioritet_terskel: 30 },
   { id: "varmepumpe_ll",    navn: "Luft/luft-varmepumpe",                ikon: "🌡️", støtte_min: 0,     støtte_max: 0,     kostnad_min: 15000,  kostnad_max: 25000,  kWh_pct: 0.20, krever_ikke: ["varmepumpe_ll","varmepumpe_lv"], passer_for: ["alle"],                        enova_program: "Ingen Enova-støtte (avviklet aug 2025)",               beskrivelse: "SPF 2,5, dekker 60 % av varmebehovet. Ingen Enova-støtte fra august 2025. Rask tilbakebetaling pga lav kostnad.", prioritet_terskel: 8  },
+  { id: "tetting",          navn: "Tettelister og fuging",               ikon: "🔧", støtte_min: 0,     støtte_max: 0,     kostnad_min: 2000,   kostnad_max: 8000,   kWh_pct: 0.05, krever_ikke: [],                              passer_for: ["alle"],                        enova_program: "Ingen Enova-støtte (grunntiltak)",                      beskrivelse: "Tette rundt vinduer, dører og gjennomføringer med tettelister, bunnsverd og fugemasse. Billigste tiltak med raskest tilbakebetaling. Anbefales alltid som første steg.", prioritet_terskel: 7  },
 ];
 
 // ─────────────────────────────────────────────
@@ -122,6 +123,9 @@ function beregnEnergi(input) {
            strømkostnad: Math.round(totalKwh * weightedCost) };
 }
 function beregnTiltak(resultat, input) {
+  // Worse energy grade → more urgent → higher effective priority thresholds
+  const gradeFaktor = { A: 0.6, B: 0.75, C: 0.9, D: 1.0, E: 1.4, F: 1.8, G: 2.2 }[resultat.merke.merke] || 1.0;
+
   return TILTAK.filter(t => {
     if (Array.isArray(input.oppvarming)) {
       if (t.krever_ikke.some(k => input.oppvarming.some(o => o.kilde === k))) return false;
@@ -130,7 +134,8 @@ function beregnTiltak(resultat, input) {
     }
     if (!t.passer_for.includes("alle") && !t.passer_for.includes(input.boligtype)) return false;
     if (t.min_areal && input.areal < t.min_areal) return false;
-    if (t.id === "isolering_vegger" && resultat.kwhPerM2 < 130) return false;
+    // Only skip veggisolering for already efficient homes (A/B merke)
+    if (t.id === "isolering_vegger" && resultat.kwhPerM2 < 100) return false;
     return true;
   }).map(t => {
     const besparelse_kr = Math.round(resultat.totalKwh * t.kWh_pct * resultat.weightedCost);
@@ -138,7 +143,9 @@ function beregnTiltak(resultat, input) {
     const kostnad_snitt = Math.round((t.kostnad_min + t.kostnad_max) / 2);
     const netto         = kostnad_snitt - støtte_snitt;
     const tilbake       = besparelse_kr > 0 ? Math.round(netto / besparelse_kr) : 99;
-    const prioritet     = tilbake <= t.prioritet_terskel ? "høy" : tilbake <= t.prioritet_terskel * 1.8 ? "middels" : "lav";
+    // Energy-grade-adjusted threshold: E/F/G homes get more "høy" classifications
+    const effTerskel    = Math.round(t.prioritet_terskel * gradeFaktor);
+    const prioritet     = tilbake <= effTerskel ? "høy" : tilbake <= effTerskel * 1.8 ? "middels" : "lav";
     return { ...t, besparelse_kr, støtte_snitt, kostnad_snitt, netto, tilbakebetaling: tilbake, prioritet };
   }).sort((a, b) => a.tilbakebetaling - b.tilbakebetaling);
 }
