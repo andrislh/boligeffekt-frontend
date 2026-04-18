@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
-const PAKKER = {
-  energirapport:     { navn: "Energirapport",     pris: 199, beløp: 19900 },
-  oppgraderingsplan: { navn: "Oppgraderingsplan", pris: 399, beløp: 39900 },
-};
+const PAKKE = { navn: "Komplett rapport", pris: 399, beløp: 39900 };
 
 // ─────────────────────────────────────────────
 // BEREGNINGSDATA
@@ -218,7 +215,6 @@ function Skala({ merke }) {
 // ─────────────────────────────────────────────
 function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
   const [epost, setEpost]       = useState("");
-  const [pakke, setPakke]       = useState("oppgraderingsplan");
   const [laster, setLaster]     = useState(false);
   const [feil, setFeil]         = useState("");
   const [delKopiert, setDelKopiert] = useState(false);
@@ -229,42 +225,20 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
     if (!epost.includes("@")) { setFeil("Skriv inn en gyldig e-postadresse"); return; }
     setFeil(""); setLaster(true);
     const resultatId = lagId(input);
-    lagreData({ resultat, input, epost, pakke });
+    lagreData({ resultat, input, epost, pakke: "oppgraderingsplan" });
     try {
       const res  = await fetch(`${BACKEND}/api/create-checkout`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resultatId, email: epost, resultatData: { resultat, input }, pakke }),
+        body: JSON.stringify({ resultatId, email: epost, resultatData: { resultat, input }, pakke: "oppgraderingsplan" }),
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
       else { setFeil("Noe gikk galt – prøv igjen."); setLaster(false); }
     } catch(_) {
-      onBetalt(epost, pakke);
+      onBetalt(epost);
       setLaster(false);
     }
   }
-
-  const kortstil = valgt => ({
-    ...S.card, border:`2px solid ${valgt ? C.navy : C.border}`,
-    cursor:"pointer", position:"relative", marginBottom:0,
-    transition:"all .15s",
-    boxShadow: valgt ? `0 8px 32px rgba(27,58,92,0.18)` : "0 2px 12px rgba(27,58,92,0.06)",
-  });
-
-  const BASIS = [
-    "Energimerke A–G med skala",
-    "Full tiltaksplan med tilbakebetalingstid",
-    "Enova-støtteoversikt",
-    "EPBD 2024-status",
-    "PDF-rapport på e-post",
-  ];
-  const EKSTRA = [
-    "Detaljert økonomianalyse",
-    "Handlingsplan – beste investering fremhevet",
-    "Enova-søknadspakke med dokumentasjonsliste",
-    "Ferdig søknadstekst for Enova",
-    "Finansieringstips: grønne boliglån",
-  ];
 
   return (
     <div style={S.app}>
@@ -293,7 +267,7 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
             <div style={{background:C.white,borderRadius:16,padding:"20px 24px",boxShadow:"0 8px 32px rgba(0,0,0,0.15)",textAlign:"center",border:`2px solid ${C.green}40`}}>
               <div style={{fontSize:"1.6rem",marginBottom:6}}>🔒</div>
               <div style={{fontWeight:800,color:C.navyDark,fontSize:"0.95rem"}}>{høy.length} tiltak identifisert</div>
-              <div style={{fontSize:"0.78rem",color:C.muted,marginTop:3}}>Velg en pakke for å låse opp</div>
+              <div style={{fontSize:"0.78rem",color:C.muted,marginTop:3}}>Kjøp rapporten for å låse opp</div>
             </div>
           </div>
         </div>
@@ -308,58 +282,15 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
           </button>
         </div>
 
-        {/* Velg pakke */}
-        <div style={{marginBottom:4}}>
-          <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,textAlign:"center",marginBottom:4}}>Velg din pakke</div>
-          <div style={{fontSize:"0.82rem",color:C.muted,textAlign:"center",marginBottom:8}}>Klikk for å velge, deretter betal</div>
-          <div style={{textAlign:"center",background:`${C.gold}18`,borderRadius:10,padding:"9px 14px",fontSize:"0.8rem",fontWeight:600,color:C.gold,marginBottom:14}}>
-            🕐 Enova-satsene fra august 2025 er bekreftet – søk FØR oppstart av arbeidet
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
-
-            {/* Pakke 1 – Energirapport */}
-            <div style={kortstil(pakke==="energirapport")} onClick={()=>setPakke("energirapport")}>
-              <div style={{fontWeight:800,fontSize:"0.88rem",color:C.navyDark,marginBottom:2}}>Energirapport</div>
-              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:900,fontSize:"1.5rem",color:C.navyDark,marginBottom:10}}>199 kr</div>
-              {BASIS.map(x=>(
-                <div key={x} style={{display:"flex",gap:6,alignItems:"flex-start",marginBottom:5}}>
-                  <span style={{color:C.green,fontWeight:800,fontSize:"0.75rem",flexShrink:0,marginTop:"1px"}}>✓</span>
-                  <span style={{fontSize:"0.73rem",color:C.muted,lineHeight:1.4}}>{x}</span>
-                </div>
-              ))}
-              <div style={{marginTop:12,padding:"9px",background:pakke==="energirapport"?`linear-gradient(135deg,${C.navy},${C.navyMid})`:"#f0ede8",borderRadius:8,textAlign:"center",color:pakke==="energirapport"?C.white:C.muted,fontWeight:700,fontSize:"0.75rem"}}>
-                {pakke==="energirapport" ? "✓ Valgt" : "Velg"}
-              </div>
-            </div>
-
-            {/* Pakke 2 – Oppgraderingsplan */}
-            <div style={kortstil(pakke==="oppgraderingsplan")} onClick={()=>setPakke("oppgraderingsplan")}>
-              <div style={{position:"absolute",top:-11,left:"50%",transform:"translateX(-50%)",background:`linear-gradient(135deg,${C.green},${C.greenLight})`,color:C.white,borderRadius:100,padding:"3px 11px",fontSize:"0.65rem",fontWeight:800,whiteSpace:"nowrap",letterSpacing:"0.05em"}}>MEST POPULÆR</div>
-              <div style={{fontWeight:800,fontSize:"0.88rem",color:C.navyDark,marginBottom:2,marginTop:6}}>Oppgraderingsplan</div>
-              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:900,fontSize:"1.5rem",color:C.navyDark,marginBottom:3}}>399 kr</div>
-              <div style={{fontSize:"0.67rem",color:C.green,fontWeight:700,marginBottom:7}}>Alt i Energirapport, pluss:</div>
-              {EKSTRA.map(x=>(
-                <div key={x} style={{display:"flex",gap:6,alignItems:"flex-start",marginBottom:5}}>
-                  <span style={{color:C.green,fontWeight:800,fontSize:"0.75rem",flexShrink:0,marginTop:"1px"}}>✓</span>
-                  <span style={{fontSize:"0.73rem",color:C.muted,lineHeight:1.4}}>{x}</span>
-                </div>
-              ))}
-              <div style={{marginTop:12,padding:"9px",background:pakke==="oppgraderingsplan"?`linear-gradient(135deg,${C.green},${C.greenLight})`:"#f0ede8",borderRadius:8,textAlign:"center",color:pakke==="oppgraderingsplan"?C.white:C.muted,fontWeight:700,fontSize:"0.75rem"}}>
-                {pakke==="oppgraderingsplan" ? "✓ Valgt" : "Velg"}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Betalingskort */}
         <div style={S.card}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
             <div>
-              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:800,fontSize:"1.05rem",color:C.navyDark}}>{PAKKER[pakke].navn}</div>
+              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:800,fontSize:"1.05rem",color:C.navyDark}}>{PAKKE.navn}</div>
               <div style={{fontSize:"0.82rem",color:C.muted}}>Engangskjøp · Ingen abonnement</div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:900,fontSize:"1.8rem",color:C.navyDark}}>{PAKKER[pakke].pris} kr</div>
+              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:900,fontSize:"1.8rem",color:C.navyDark}}>{PAKKE.pris} kr</div>
               <div style={{fontSize:"0.72rem",color:C.muted}}>inkl. mva</div>
             </div>
           </div>
@@ -370,13 +301,13 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
             {feil && <div style={{color:"#e53e3e",fontSize:"0.8rem",marginTop:5}}>{feil}</div>}
           </div>
           <div style={{fontSize:"0.78rem",color:C.muted,textAlign:"center",marginBottom:10,lineHeight:1.5}}>
-            En energirådgiver koster 9 000–20 000 kr. Her får du den samme analysen for 199 kr.
+            En energirådgiver koster 9 000–20 000 kr. Her får du den samme analysen for 399 kr.
           </div>
           <div style={{display:"flex",justifyContent:"center",gap:16,marginBottom:10}}>
             {["💳 Kort","🔒 Stripe","📄 PDF på e-post"].map(x=><span key={x} style={{fontSize:"0.72rem",color:C.muted}}>{x}</span>)}
           </div>
           <button style={{...S.btnP,background:`linear-gradient(135deg,${C.green},${C.greenLight})`,boxShadow:`0 6px 20px ${C.green}44`}} onClick={betal} disabled={laster}>
-            {laster ? "Sender til betaling…" : `Velg ${PAKKER[pakke].navn} – ${PAKKER[pakke].pris} kr →`}
+            {laster ? "Sender til betaling…" : `Kjøp ${PAKKE.navn} – ${PAKKE.pris} kr →`}
           </button>
         </div>
         <p style={{textAlign:"center",fontSize:"0.7rem",color:"#bbb",lineHeight:1.6}}>Betaling håndteres av Stripe. BoligEffekt lagrer ikke kortinformasjon.</p>
@@ -699,6 +630,7 @@ const ENOVA_DOCS = {
   solceller:        "Faktura, teknisk dokumentasjon, nettilknytningsavtale",
 };
 
+// eslint-disable-next-line no-unused-vars
 function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
   const [visAlle, setVisAlle]       = useState(false);
   const [fane, setFane]             = useState("tiltak");
@@ -727,8 +659,8 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
               {pdfSendt ? `PDF-rapport sendt til ${epost}` : "PDF-rapport sendes til din e-post om et øyeblikk"}
             </div>
           </div>
-          <div style={{background:pakke==="oppgraderingsplan"?`linear-gradient(135deg,${C.green},${C.greenLight})`:`linear-gradient(135deg,${C.navy},${C.navyMid})`,color:C.white,borderRadius:100,padding:"4px 12px",fontSize:"0.68rem",fontWeight:800,whiteSpace:"nowrap",flexShrink:0}}>
-            {pakke==="oppgraderingsplan" ? "Oppgraderingsplan" : "Energirapport"}
+          <div style={{background:`linear-gradient(135deg,${C.green},${C.greenLight})`,color:C.white,borderRadius:100,padding:"4px 12px",fontSize:"0.68rem",fontWeight:800,whiteSpace:"nowrap",flexShrink:0}}>
+            Komplett rapport
           </div>
         </div>
 
@@ -1501,8 +1433,6 @@ export default function App() {
   const [input, setInput]           = useState(null);
   const [betalt, setBetalt]         = useState(false);
   const [epost, setEpost]           = useState("");
-  const [pakke, setPakke]           = useState("energirapport");
-  const [pdfSendt, setPdfSendt]     = useState(false);
   const [modal, setModal]           = useState(null);
   const [sessionId, setSessionId]   = useState(null);
 
@@ -1518,34 +1448,16 @@ export default function App() {
       return;
     }
 
-    console.log("[REDIRECT] Gjenoppretter rapport – pakke:", lagret.pakke, "| e-post:", lagret.epost);
-
-    const valgtPakke = lagret.pakke || "energirapport";
+    console.log("[REDIRECT] Gjenoppretter rapport – e-post:", lagret.epost);
 
     setResultat(lagret.resultat);
     setInput(lagret.input);
     setEpost(lagret.epost || "");
-    setPakke(valgtPakke);
     setSessionId(sessionId);
     setBetalt(true);
     setSkjerm("resultat");
 
     window.history.replaceState({}, "", "/");
-
-    // Oppgraderingsplan: brukeren velger tiltak selv før PDF sendes
-    // Energirapport: send PDF med en gang
-    if (valgtPakke !== "oppgraderingsplan") {
-      fetch(`${BACKEND}/api/send-rapport`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          session_id:   sessionId,
-          resultatData: lagret,
-          epost:        lagret.epost,
-          pakke:        valgtPakke,
-        }),
-      }).then(() => setPdfSendt(true)).catch(console.error);
-    }
   }, []);
 
   function lagOgVis(inp) {
@@ -1566,18 +1478,15 @@ export default function App() {
 
   function nullstill() {
     setSkjerm("start"); setSteg(0); setSvar({}); setOppvarmingValg([]);
-    setResultat(null); setInput(null); setBetalt(false); setPakke("energirapport"); setPdfSendt(false); setSessionId(null);
+    setResultat(null); setInput(null); setBetalt(false); setSessionId(null);
   }
 
   // Resultat-skjerm
   if (skjerm === "resultat" && resultat) {
     if (betalt) {
-      if (pakke === "oppgraderingsplan") {
-        return <><OppgraderingsFlow resultat={resultat} epost={epost} input={input} sessionId={sessionId} onNullstill={nullstill}/><Chatbot/></>;
-      }
-      return <><FullRapport resultat={resultat} epost={epost} pdfSendt={pdfSendt} pakke={pakke} onNullstill={nullstill}/><Chatbot/></>;
+      return <><OppgraderingsFlow resultat={resultat} epost={epost} input={input} sessionId={sessionId} onNullstill={nullstill}/><Chatbot/></>;
     }
-    return <><Betalingsmur resultat={resultat} input={input} onBetalt={(e, p) => { setEpost(e); setPakke(p); setBetalt(true); }} onNullstill={nullstill}/><Chatbot/></>;
+    return <><Betalingsmur resultat={resultat} input={input} onBetalt={(e) => { setEpost(e); setBetalt(true); }} onNullstill={nullstill}/><Chatbot/></>;
   }
 
   // Avansert skjema
