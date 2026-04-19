@@ -173,48 +173,70 @@ const STEG = [
 // ─────────────────────────────────────────────
 // DESIGN
 // ─────────────────────────────────────────────
-const C = { bg:"#f0ede8",white:"#ffffff",navy:"#1b3a5c",navyDark:"#0f2540",navyMid:"#1e4a73",green:"#2ab55a",greenLight:"#3ecf6e",muted:"#6b7a8d",border:"rgba(27,58,92,0.10)",section:"#f7f5f2",gold:"#f7941d" };
+const C = { bg:"#F4F0E8",white:"#FFFFFF",navy:"#1B3A5C",navyDark:"#0D2238",navyMid:"#1E4A73",green:"#2AB55A",greenLight:"#3ECF6E",muted:"#7A8899",border:"rgba(27,58,92,0.09)",section:"#F0EDE5",gold:"#F0900D" };
 const S = {
-  app:    { minHeight:"100vh", background:`linear-gradient(160deg,${C.bg} 0%,#e8f4ec 100%)`, fontFamily:"'Segoe UI',system-ui,sans-serif", paddingBottom:60 },
-  header: { background:"rgba(255,255,255,0.88)", backdropFilter:"blur(12px)", borderBottom:`1px solid ${C.border}`, padding:"14px 24px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 },
-  logo:   { fontFamily:"'Playfair Display',Georgia,serif", fontWeight:700, fontSize:"1.25rem", color:C.navy, letterSpacing:"-0.01em" },
+  app:    { minHeight:"100vh", background:`linear-gradient(170deg,${C.bg} 0%,#E6F2EB 100%)`, fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif", paddingBottom:60 },
+  header: { background:"rgba(255,255,255,0.94)", backdropFilter:"blur(16px)", borderBottom:`1px solid ${C.border}`, padding:"14px 24px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10, boxShadow:"0 1px 0 rgba(27,58,92,0.06)" },
+  logo:   { fontFamily:"'Fraunces',Georgia,serif", fontWeight:700, fontSize:"1.3rem", color:C.navyDark, letterSpacing:"-0.02em" },
   wrap:   { maxWidth:640, margin:"0 auto", padding:"28px 18px" },
-  card:   { background:C.white, borderRadius:20, padding:"28px 24px", boxShadow:"0 8px 40px rgba(27,58,92,0.09)", border:`1px solid ${C.border}`, marginBottom:16 },
-  tag:    { fontSize:"0.72rem", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:C.green, marginBottom:6 },
-  h1:     { fontFamily:"Georgia,serif", fontWeight:800, fontSize:"clamp(1.7rem,5vw,2.4rem)", color:C.navyDark, lineHeight:1.15, marginBottom:10 },
-  h2:     { fontFamily:"Georgia,serif", fontWeight:700, fontSize:"1.2rem", color:C.navyDark, marginBottom:6 },
-  sub:    { fontSize:"0.88rem", color:C.muted, lineHeight:1.6 },
-  prog:   { height:5, background:"#e0ddd8", borderRadius:100, marginBottom:28, overflow:"hidden" },
-  fill:   w => ({ height:"100%", background:`linear-gradient(90deg,${C.green},${C.greenLight})`, borderRadius:100, width:`${w}%`, transition:"width .4s ease" }),
-  grid:   { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(145px,1fr))", gap:10 },
-  btn:    sel => ({ background:sel?`linear-gradient(135deg,${C.navy},${C.navyMid})`:C.white, color:sel?C.white:C.navyDark, border:sel?`2px solid ${C.navy}`:`2px solid ${C.border}`, borderRadius:14, padding:"16px 10px", cursor:"pointer", fontWeight:600, fontSize:"0.86rem", textAlign:"center", transition:"all .15s" }),
-  ikon:   { fontSize:"1.7rem", display:"block", marginBottom:7 },
-  btnP:   { width:"100%", padding:"15px", background:`linear-gradient(135deg,${C.navy},${C.navyMid})`, color:C.white, border:"none", borderRadius:12, fontSize:"1rem", fontWeight:700, cursor:"pointer", boxShadow:"0 6px 20px rgba(27,58,92,0.22)", marginTop:8 },
+  card:   { background:C.white, borderRadius:22, padding:"28px 24px", boxShadow:"0 2px 8px rgba(13,34,56,0.05), 0 8px 32px rgba(13,34,56,0.08)", border:`1px solid ${C.border}`, marginBottom:16 },
+  tag:    { fontSize:"0.7rem", fontWeight:800, letterSpacing:"0.12em", textTransform:"uppercase", color:C.green, marginBottom:8 },
+  h1:     { fontFamily:"'Fraunces',Georgia,serif", fontWeight:700, fontSize:"clamp(1.75rem,5vw,2.5rem)", color:C.navyDark, lineHeight:1.1, marginBottom:12 },
+  h2:     { fontFamily:"'Fraunces',Georgia,serif", fontWeight:600, fontSize:"1.25rem", color:C.navyDark, marginBottom:8 },
+  sub:    { fontSize:"0.88rem", color:C.muted, lineHeight:1.65 },
+  prog:   { height:4, background:"rgba(27,58,92,0.10)", borderRadius:100, marginBottom:32, overflow:"hidden" },
+  fill:   w => ({ height:"100%", background:`linear-gradient(90deg,${C.green},${C.greenLight})`, borderRadius:100, width:`${w}%`, transition:"width .5s cubic-bezier(.4,0,.2,1)" }),
+  grid:   { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(148px,1fr))", gap:10 },
+  btn:    sel => ({ position:"relative", background:sel?`linear-gradient(135deg,${C.navy},${C.navyMid})`:C.white, color:sel?C.white:C.navyDark, border:sel?`2px solid transparent`:`2px solid ${C.border}`, borderRadius:16, padding:"18px 12px", cursor:"pointer", fontWeight:600, fontSize:"0.86rem", textAlign:"center", boxShadow:sel?"0 4px 16px rgba(27,58,92,0.25)":"0 1px 4px rgba(0,0,0,0.04)" }),
+  ikon:   { fontSize:"1.8rem", display:"block", marginBottom:8 },
+  btnP:   { width:"100%", padding:"16px", background:`linear-gradient(135deg,${C.navy},${C.navyMid})`, color:C.white, border:"none", borderRadius:14, fontSize:"1rem", fontWeight:700, cursor:"pointer", boxShadow:"0 4px 20px rgba(27,58,92,0.28)", marginTop:8, letterSpacing:"-0.01em" },
   btnG:   { background:"transparent", border:`1.5px solid ${C.border}`, borderRadius:10, padding:"9px 18px", fontSize:"0.84rem", fontWeight:600, color:C.navy, cursor:"pointer" },
-  lbl:    { display:"block", fontSize:"0.8rem", fontWeight:700, color:C.navy, marginBottom:5 },
-  inp:    { width:"100%", padding:"11px 13px", borderRadius:10, border:`1.5px solid ${C.border}`, fontSize:"0.94rem", color:C.navyDark, background:"#fafafa", outline:"none", boxSizing:"border-box" },
-  sel:    { width:"100%", padding:"11px 13px", borderRadius:10, border:`1.5px solid ${C.border}`, fontSize:"0.94rem", color:C.navyDark, background:"#fafafa", outline:"none", boxSizing:"border-box" },
+  lbl:    { display:"block", fontSize:"0.78rem", fontWeight:700, color:C.navy, marginBottom:6, letterSpacing:"0.01em" },
+  inp:    { width:"100%", padding:"12px 14px", borderRadius:11, border:`1.5px solid rgba(27,58,92,0.14)`, fontSize:"0.94rem", color:C.navyDark, background:"#FAFAF8", outline:"none", boxSizing:"border-box" },
+  sel:    { width:"100%", padding:"12px 14px", borderRadius:11, border:`1.5px solid rgba(27,58,92,0.14)`, fontSize:"0.94rem", color:C.navyDark, background:"#FAFAF8", outline:"none", boxSizing:"border-box" },
 };
 
 function Header({ onBack, onHome }) {
   return (
-    <>
-      <div style={S.header}>
-        <div onClick={onHome} style={{display:"flex",alignItems:"center",gap:12,cursor:onHome?"pointer":"default"}}>
-          <img src="/logo.png" alt="BoligEffekt" style={{height:"36px",width:"36px",objectFit:"contain"}}/>
-          <span style={S.logo}>BoligEffekt</span>
-        </div>
-        {onBack && <button onClick={onBack} style={{...S.btnG,marginLeft:"auto"}}>← Tilbake</button>}
+    <div style={S.header}>
+      <div onClick={onHome} style={{display:"flex",alignItems:"center",gap:11,cursor:onHome?"pointer":"default",textDecoration:"none"}}>
+        <img src="/logo.png" alt="BoligEffekt" style={{height:"34px",width:"34px",objectFit:"contain",borderRadius:8}}/>
+        <span style={S.logo}>BoligEffekt</span>
       </div>
-    </>
+      {onBack && (
+        <button className="be-btn-g" onClick={onBack} style={{...S.btnG,marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
+          <span style={{fontSize:"0.9rem"}}>←</span> Tilbake
+        </button>
+      )}
+    </div>
   );
 }
-function Merke({ m, stor }) {
-  const sz = stor ? 76 : 56;
-  return <div style={{width:sz,height:sz,borderRadius:stor?18:12,background:m.farge,color:m.tekst,display:"flex",alignItems:"center",justifyContent:"center",fontSize:stor?"2.6rem":"1.8rem",fontWeight:900,fontFamily:"Georgia,serif",boxShadow:`0 6px 20px ${m.farge}55`,flexShrink:0}}>{m.merke}</div>;
+function Merke({ m, stor, reveal }) {
+  const sz = stor ? 80 : 58;
+  return (
+    <div className={`be-merke${reveal?" be-grade-reveal":""}`} style={{width:sz,height:sz,borderRadius:stor?22:15,background:m.farge,color:m.tekst,display:"flex",alignItems:"center",justifyContent:"center",fontSize:stor?"2.8rem":"1.9rem",fontWeight:900,fontFamily:"'Fraunces',Georgia,serif",boxShadow:`0 8px 28px ${m.farge}70, 0 2px 8px ${m.farge}40`,flexShrink:0,position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,rgba(255,255,255,0.22) 0%,transparent 55%)",borderRadius:"inherit",pointerEvents:"none"}}/>
+      {m.merke}
+    </div>
+  );
 }
 function Skala({ merke }) {
-  return <>{ENERGIMERKER.map(em => <div key={em.merke} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}><div style={{width:22,height:22,borderRadius:6,background:em.farge,color:em.tekst,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:"0.78rem",flexShrink:0}}>{em.merke}</div><div style={{flex:1,height:7,background:"#eee",borderRadius:100,overflow:"hidden"}}><div style={{height:"100%",background:em.farge,borderRadius:100,width:em.merke===merke.merke?"100%":"10%",opacity:em.merke===merke.merke?1:0.25}}/></div>{em.merke===merke.merke&&<span style={{fontSize:"0.7rem",fontWeight:700,color:em.farge,whiteSpace:"nowrap"}}>← din bolig</span>}</div>)}</>;
+  return (
+    <div>
+      {ENERGIMERKER.map(em => {
+        const isActive = em.merke === merke.merke;
+        return (
+          <div key={em.merke} style={{display:"flex",alignItems:"center",gap:10,marginBottom:isActive?8:5}}>
+            <div style={{width:24,height:24,borderRadius:7,background:em.farge,color:em.tekst,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:"0.78rem",flexShrink:0,opacity:isActive?1:0.38,transition:"opacity .3s",boxShadow:isActive?`0 3px 10px ${em.farge}70`:"none"}}>{em.merke}</div>
+            <div style={{flex:1,height:isActive?9:6,background:"#E8E4DA",borderRadius:100,overflow:"hidden",transition:"height .3s ease"}}>
+              <div style={{height:"100%",background:em.farge,borderRadius:100,width:isActive?"100%":"10%",opacity:isActive?1:0.22,transition:"width .6s cubic-bezier(.4,0,.2,1)"}}/>
+            </div>
+            {isActive && <span style={{fontSize:"0.7rem",fontWeight:800,color:em.farge,whiteSpace:"nowrap",letterSpacing:"0.01em"}}>← din bolig</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 // ─────────────────────────────────────────────
@@ -252,68 +274,71 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
       <Header onHome={onNullstill}/>
       <div style={S.wrap}>
         {/* Gratis – energimerke */}
-        <div style={S.card}>
-          <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20}}>
-            <Merke m={merke} stor/>
+        <div className="be-in" style={{...S.card,background:`linear-gradient(150deg,${merke.farge}14 0%,${C.white} 55%)`,border:`1.5px solid ${merke.farge}35`}}>
+          <div style={{display:"flex",alignItems:"center",gap:20,marginBottom:22}}>
+            <Merke m={merke} stor reveal/>
             <div>
               <div style={S.tag}>Estimert energimerke</div>
-              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:800,fontSize:"1.6rem",color:C.navyDark}}>Merke {merke.merke}</div>
-              <div style={{fontSize:"0.82rem",color:C.muted}}>{kwhPerM2} kWh/m²/år · {merke.epbd}</div>
+              <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.8rem",color:C.navyDark,lineHeight:1}}>Merke {merke.merke}</div>
+              <div style={{fontSize:"0.83rem",color:C.muted,marginTop:6}}>{kwhPerM2} kWh/m²/år · {merke.epbd}</div>
             </div>
           </div>
           <Skala merke={merke}/>
         </div>
 
         {/* Uskarp forhåndsvisning av tiltak */}
-        <div style={{position:"relative",marginBottom:16}}>
-          <div style={{...S.card,filter:"blur(3.5px)",userSelect:"none",pointerEvents:"none",opacity:0.55}}>
-            <div style={{fontWeight:700,marginBottom:12}}>Anbefalte tiltak</div>
-            {[0,1,2].map(i=><div key={i} style={{background:C.section,borderRadius:10,padding:14,marginBottom:8}}><div style={{height:12,background:"#ddd",borderRadius:6,width:"60%",marginBottom:8}}/><div style={{height:8,background:"#eee",borderRadius:6,width:"80%"}}/></div>)}
+        {/* Blurred tiltak preview */}
+        <div className="be-in-1" style={{position:"relative",marginBottom:16}}>
+          <div style={{...S.card,filter:"blur(4px)",userSelect:"none",pointerEvents:"none",opacity:0.5}}>
+            <div style={{fontWeight:700,marginBottom:12,color:C.navyDark}}>Anbefalte tiltak</div>
+            {[0,1,2].map(i=><div key={i} style={{background:C.section,borderRadius:12,padding:14,marginBottom:8}}><div style={{height:11,background:"#D8D4CC",borderRadius:6,width:"60%",marginBottom:8}}/><div style={{height:7,background:"#E4E0D8",borderRadius:6,width:"80%"}}/></div>)}
           </div>
           <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <div style={{background:C.white,borderRadius:16,padding:"20px 24px",boxShadow:"0 8px 32px rgba(0,0,0,0.15)",textAlign:"center",border:`2px solid ${C.green}40`}}>
+            <div style={{background:C.white,borderRadius:18,padding:"22px 26px",boxShadow:"0 12px 40px rgba(0,0,0,0.14)",textAlign:"center",border:`2px solid ${C.green}45`}}>
               <div style={{fontSize:"1.6rem",marginBottom:6}}>🔒</div>
-              <div style={{fontWeight:800,color:C.navyDark,fontSize:"0.95rem"}}>{høy.length} tiltak identifisert</div>
-              <div style={{fontSize:"0.78rem",color:C.muted,marginTop:3}}>Kjøp rapporten for å låse opp</div>
+              <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,color:C.navyDark,fontSize:"1rem"}}>{høy.length} tiltak identifisert</div>
+              <div style={{fontSize:"0.78rem",color:C.muted,marginTop:4}}>Kjøp rapporten for å låse opp</div>
             </div>
           </div>
         </div>
 
         {/* Del resultatet */}
-        <div style={{textAlign:"center",marginBottom:14}}>
-          <button
+        <div className="be-in-2" style={{textAlign:"center",marginBottom:16}}>
+          <button className="be-btn-g"
             onClick={() => navigator.clipboard.writeText("Sjekk energimerket på din bolig: https://boligeffekt.no").then(() => { setDelKopiert(true); setTimeout(() => setDelKopiert(false), 2000); })}
             style={{...S.btnG,display:"inline-flex",alignItems:"center",gap:8}}
           >
-            {delKopiert ? "Lenke kopiert! ✓" : "🔗 Del resultatet"}
+            {delKopiert ? "✓ Lenke kopiert!" : "🔗 Del resultatet"}
           </button>
         </div>
 
         {/* Betalingskort */}
-        <div style={S.card}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div className="be-in-3" style={{...S.card,border:`1.5px solid rgba(27,58,92,0.12)`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
             <div>
-              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:800,fontSize:"1.05rem",color:C.navyDark}}>{PAKKE.navn}</div>
-              <div style={{fontSize:"0.82rem",color:C.muted}}>Engangskjøp · Ingen abonnement</div>
+              <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark}}>{PAKKE.navn}</div>
+              <div style={{fontSize:"0.8rem",color:C.muted,marginTop:2}}>Engangskjøp · Ingen abonnement</div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:900,fontSize:"1.8rem",color:C.navyDark}}>{PAKKE.pris} kr</div>
-              <div style={{fontSize:"0.72rem",color:C.muted}}>inkl. mva</div>
+              <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:900,fontSize:"1.9rem",color:C.navyDark,lineHeight:1}}>{PAKKE.pris} kr</div>
+              <div style={{fontSize:"0.7rem",color:C.muted,marginTop:2}}>inkl. mva</div>
             </div>
           </div>
-          <div style={{marginBottom:12}}>
-            <label style={S.lbl}>E-postadresse (rapport sendes hit automatisk)</label>
-            <input style={S.inp} type="email" placeholder="navn@epost.no" value={epost}
+          <div style={{marginBottom:14}}>
+            <label style={S.lbl}>E-postadresse <span style={{color:C.muted,fontWeight:400}}>(rapport sendes automatisk)</span></label>
+            <input className="be-input" style={S.inp} type="email" placeholder="navn@epost.no" value={epost}
               onChange={e=>setEpost(e.target.value)} onKeyDown={e=>e.key==="Enter"&&betal()}/>
-            {feil && <div style={{color:"#e53e3e",fontSize:"0.8rem",marginTop:5}}>{feil}</div>}
+            {feil && <div style={{color:"#DC2626",fontSize:"0.8rem",marginTop:6,display:"flex",alignItems:"center",gap:4}}><span>⚠</span>{feil}</div>}
           </div>
-          <div style={{fontSize:"0.78rem",color:C.muted,textAlign:"center",marginBottom:10,lineHeight:1.5}}>
-            En energirådgiver koster 9 000–20 000 kr. Her får du den samme analysen for 399 kr.
+          <div style={{background:C.section,borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:"0.78rem",color:C.muted,lineHeight:1.55,textAlign:"center"}}>
+            En energirådgiver koster <strong style={{color:C.navyDark}}>9 000–20 000 kr</strong>. Her får du den samme analysen for <strong style={{color:C.navyDark}}>399 kr</strong>.
           </div>
-          <div style={{display:"flex",justifyContent:"center",gap:16,marginBottom:10}}>
-            {["💳 Kort","🔒 Stripe","📄 PDF på e-post"].map(x=><span key={x} style={{fontSize:"0.72rem",color:C.muted}}>{x}</span>)}
+          <div style={{display:"flex",justifyContent:"center",gap:16,marginBottom:12}}>
+            {[{i:"💳",t:"Kortbetaling"},{i:"🔒",t:"Stripe"},{i:"📄",t:"PDF på e-post"}].map(x=>(
+              <span key={x.t} style={{display:"flex",alignItems:"center",gap:4,fontSize:"0.72rem",color:C.muted}}><span>{x.i}</span>{x.t}</span>
+            ))}
           </div>
-          <button style={{...S.btnP,background:`linear-gradient(135deg,${C.green},${C.greenLight})`,boxShadow:`0 6px 20px ${C.green}44`}} onClick={betal} disabled={laster}>
+          <button className="be-btn-p" style={{...S.btnP,background:`linear-gradient(135deg,${C.green},${C.greenLight})`,boxShadow:`0 6px 24px ${C.green}50`}} onClick={betal} disabled={laster}>
             {laster ? "Sender til betaling…" : `Kjøp ${PAKKE.navn} – ${PAKKE.pris} kr →`}
           </button>
         </div>
@@ -496,13 +521,13 @@ function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
                 <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:20}}>
                   <div style={{textAlign:"center"}}>
                     <div style={{fontSize:"0.68rem",color:C.muted,fontWeight:700,marginBottom:5}}>I dag</div>
-                    <div style={{width:54,height:54,borderRadius:14,background:resultat.merke.farge,color:resultat.merke.tekst,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.9rem",fontWeight:900,fontFamily:"Georgia,serif",boxShadow:`0 4px 14px ${resultat.merke.farge}55`}}>{resultat.merke.merke}</div>
+                    <div style={{width:54,height:54,borderRadius:14,background:resultat.merke.farge,color:resultat.merke.tekst,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.9rem",fontWeight:900,fontFamily:"'Fraunces',Georgia,serif",boxShadow:`0 4px 14px ${resultat.merke.farge}55`}}>{resultat.merke.merke}</div>
                     <div style={{fontSize:"0.67rem",color:C.muted,marginTop:5}}>{resultat.kwhPerM2} kWh/m²</div>
                   </div>
                   <div style={{color:C.green,fontSize:"1.8rem",fontWeight:900,lineHeight:1}}>→</div>
                   <div style={{textAlign:"center"}}>
                     <div style={{fontSize:"0.68rem",color:C.muted,fontWeight:700,marginBottom:5}}>Med tiltak</div>
-                    <div style={{width:54,height:54,borderRadius:14,background:nyMerke.farge,color:nyMerke.tekst,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.9rem",fontWeight:900,fontFamily:"Georgia,serif",boxShadow:`0 4px 14px ${nyMerke.farge}55`}}>{nyMerke.merke}</div>
+                    <div style={{width:54,height:54,borderRadius:14,background:nyMerke.farge,color:nyMerke.tekst,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.9rem",fontWeight:900,fontFamily:"'Fraunces',Georgia,serif",boxShadow:`0 4px 14px ${nyMerke.farge}55`}}>{nyMerke.merke}</div>
                     <div style={{fontSize:"0.67rem",color:C.muted,marginTop:5}}>{nyKwhPerM2} kWh/m²</div>
                   </div>
                 </div>
@@ -547,7 +572,7 @@ function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
             <div style={S.card}>
               <div style={{textAlign:"center",padding:"20px 16px"}}>
                 <div style={{fontSize:"3rem",marginBottom:12}}>✅</div>
-                <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:800,fontSize:"1.4rem",color:C.navyDark,marginBottom:8}}>Rapporten er sendt!</div>
+                <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:800,fontSize:"1.4rem",color:C.navyDark,marginBottom:8}}>Rapporten er sendt!</div>
                 <div style={{fontSize:"0.88rem",color:C.muted,lineHeight:1.7,marginBottom:20}}>
                   Din Oppgraderingsplan med {valgte.size} tiltak er sendt til <strong>{epost}</strong>.<br/>
                   Sjekk innboksen din – rapporten er klar til bruk.
@@ -573,7 +598,7 @@ function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
               {leadSendt ? (
                 <div style={{textAlign:"center",padding:"16px 0"}}>
                   <div style={{fontSize:"2rem",marginBottom:8}}>🙌</div>
-                  <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:6}}>Takk!</div>
+                  <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:6}}>Takk!</div>
                   <div style={{fontSize:"0.85rem",color:C.muted,lineHeight:1.6}}>Vi kontakter deg innen 1–2 virkedager med tilbud fra kvalifiserte håndverkere i ditt område.</div>
                 </div>
               ) : (
@@ -581,7 +606,7 @@ function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
                   <div style={{display:"flex",alignItems:"flex-start",gap:14,marginBottom:16}}>
                     <div style={{fontSize:"1.8rem",flexShrink:0}}>🔨</div>
                     <div>
-                      <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:4}}>Trenger du hjelp med gjennomføringen?</div>
+                      <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:4}}>Trenger du hjelp med gjennomføringen?</div>
                       <div style={{fontSize:"0.82rem",color:C.muted,lineHeight:1.55}}>Vi kan hjelpe deg med å finne kvalifiserte håndverkere for tiltakene du har valgt.</div>
                     </div>
                   </div>
@@ -674,10 +699,10 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
         {/* Energimerke */}
         <div style={S.card}>
           <div style={{display:"flex",alignItems:"center",gap:18,marginBottom:20}}>
-            <Merke m={merke} stor/>
+            <Merke m={merke} stor reveal/>
             <div>
               <div style={S.tag}>Energimerke</div>
-              <div style={{fontFamily:"Georgia,serif",fontWeight:800,fontSize:"1.6rem",color:C.navyDark}}>{merke.merke} – {merke.epbd}</div>
+              <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:800,fontSize:"1.6rem",color:C.navyDark}}>{merke.merke} – {merke.epbd}</div>
               <div style={{fontSize:"0.82rem",color:C.muted}}>{resultat.bygData.label} · {resultat.klima.label.split("(")[0].trim()}</div>
             </div>
           </div>
@@ -969,7 +994,7 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
           {leadSendt ? (
             <div style={{textAlign:"center",padding:"16px 0"}}>
               <div style={{fontSize:"2rem",marginBottom:10}}>🙌</div>
-              <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:6}}>Takk!</div>
+              <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:6}}>Takk!</div>
               <div style={{fontSize:"0.88rem",color:C.muted,lineHeight:1.6}}>Vi tar kontakt innen 1–2 virkedager.</div>
             </div>
           ) : (
@@ -977,7 +1002,7 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
               <div style={{display:"flex",alignItems:"flex-start",gap:14,marginBottom:16}}>
                 <div style={{fontSize:"1.8rem",flexShrink:0}}>🔨</div>
                 <div>
-                  <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:4}}>Vil du ha hjelp med gjennomføringen?</div>
+                  <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:4}}>Vil du ha hjelp med gjennomføringen?</div>
                   <div style={{fontSize:"0.82rem",color:C.muted,lineHeight:1.55}}>Vi kan koble deg med kvalifiserte håndverkere i ditt område for tiltakene i rapporten din.</div>
                 </div>
               </div>
@@ -1062,7 +1087,7 @@ function KunnskapsHub() {
     <div style={{marginTop:28}}>
       <div style={{textAlign:"center",marginBottom:14}}>
         <div style={S.tag}>Lær mer</div>
-        <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark}}>Kunnskapsbase om energimerking</div>
+        <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark}}>Kunnskapsbase om energimerking</div>
       </div>
       <div style={{display:"flex",gap:4,background:C.section,borderRadius:12,padding:5,overflowX:"auto",marginBottom:0}}>
         {[["energimerking","Energimerking"],["enova","Enova 2025"],["lover","Lover & regler"],["nyheter","Nyheter"]].map(([id,lbl])=>(
@@ -1074,7 +1099,7 @@ function KunnskapsHub() {
         {/* TAB 1 – Energimerking forklart */}
         {fane === "energimerking" && (
           <div>
-            <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:12}}>Energimerking A–G forklart</div>
+            <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:12}}>Energimerking A–G forklart</div>
 
             {/* Visuell skala – Kilde: Energimerkeforskriften (FOR-2009-12-18-1665) */}
             <div style={{marginBottom:18}}>
@@ -1120,7 +1145,7 @@ function KunnskapsHub() {
         {/* TAB 2 – Enova-guiden 2025 */}
         {fane === "enova" && (
           <div>
-            <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:4}}>Enova-guiden 2025</div>
+            <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:4}}>Enova-guiden 2025</div>
             <div style={{...S.sub,marginBottom:16}}>Oppdaterte støttebeløp og søknadsveiledning. Søk alltid via enova.no.</div>
 
             {/* Støtteoversikt – Kilde: Enova august 2025 */}
@@ -1199,7 +1224,7 @@ function KunnskapsHub() {
         {/* TAB 3 – Lover & regler */}
         {fane === "lover" && (
           <div>
-            <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:12}}>Lover & regler</div>
+            <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:12}}>Lover & regler</div>
 
             <div style={{display:"grid",gap:12,marginBottom:18}}>
               {[
@@ -1256,7 +1281,7 @@ function KunnskapsHub() {
           <div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
               <div>
-                <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark}}>Siste nyheter</div>
+                <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark}}>Siste nyheter</div>
                 <div style={{fontSize:"0.76rem",color:C.muted,marginTop:2}}>Energimerking, Enova og boligoppgradering</div>
               </div>
               <button
@@ -1528,7 +1553,7 @@ export default function App() {
                 </select>
               </div>
             ))}
-            <button style={S.btnP} onClick={()=>lagOgVis({areal:Number(avForm.areal)||120,byggeår:Number(avForm.byggeår)||1978,boligtype:avForm.boligtype,klimasone:avForm.klimasone,oppvarming:avForm.oppvarming,vinduer_type:avForm.vinduer_type,isolering_nivå:avForm.isolering_nivå,antall_etasjer:Number(avForm.antall_etasjer)||2})}>
+            <button className="be-btn-p" style={S.btnP} onClick={()=>lagOgVis({areal:Number(avForm.areal)||120,byggeår:Number(avForm.byggeår)||1978,boligtype:avForm.boligtype,klimasone:avForm.klimasone,oppvarming:avForm.oppvarming,vinduer_type:avForm.vinduer_type,isolering_nivå:avForm.isolering_nivå,antall_etasjer:Number(avForm.antall_etasjer)||2})}>
               Beregn energimerke →
             </button>
           </div>
@@ -1590,10 +1615,16 @@ export default function App() {
           <div style={S.app}>
             <Header onBack={()=>steg===0?nullstill():setSteg(steg-1)} onHome={nullstill}/>
             <div style={S.wrap}>
-              <div style={S.prog}><div style={S.fill((steg/STEG.length)*100)}/></div>
-              <div style={{textAlign:"center",marginBottom:28}}>
+              {/* Pill progress */}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,marginBottom:32}}>
+                {STEG.map((_,i)=>(
+                  <div key={i} style={{height:5,borderRadius:100,transition:"all .45s cubic-bezier(.4,0,.2,1)",background:i<steg?C.green:i===steg?C.navy:"rgba(27,58,92,0.14)",width:i===steg?28:8}}/>
+                ))}
+              </div>
+              <div key={steg} className="be-slide-in">
+              <div style={{textAlign:"center",marginBottom:32}}>
                 <div style={S.tag}>Spørsmål {steg+1} av {STEG.length}</div>
-                <h2 style={{fontFamily:"Georgia,serif",fontWeight:800,fontSize:"clamp(1.3rem,4vw,1.8rem)",color:C.navyDark,marginBottom:8}}>{s.tittel}</h2>
+                <h2 style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"clamp(1.4rem,4.5vw,2rem)",color:C.navyDark,marginBottom:10,lineHeight:1.15}}>{s.tittel}</h2>
                 <p style={S.sub}>{s.hint}</p>
               </div>
               <div style={S.grid}>
@@ -1602,12 +1633,11 @@ export default function App() {
                   const sel = selIdx >= 0;
                   return (
                     <button key={v.verdi}
+                      className="be-choice"
                       style={{...S.btn(sel),position:"relative"}}
-                      onClick={() => toggleOppvarming(v.verdi)}
-                      onMouseEnter={e=>{if(!sel){e.currentTarget.style.borderColor=C.navy;e.currentTarget.style.transform="translateY(-2px)";}}}
-                      onMouseLeave={e=>{if(!sel){e.currentTarget.style.borderColor=C.border;e.currentTarget.style.transform="";}}}>
+                      onClick={() => toggleOppvarming(v.verdi)}>
                       {sel && (
-                        <span style={{position:"absolute",top:6,right:6,width:18,height:18,borderRadius:"50%",background:C.green,color:"#fff",fontSize:"0.65rem",fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        <span style={{position:"absolute",top:7,right:7,width:18,height:18,borderRadius:"50%",background:C.green,color:"#fff",fontSize:"0.65rem",fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:`0 2px 6px ${C.green}70`}}>
                           {selIdx+1}
                         </span>
                       )}
@@ -1632,7 +1662,9 @@ export default function App() {
                 </div>
               )}
 
+              </div>{/* end be-slide-in */}
               <button
+                className="be-btn-p"
                 style={{...S.btnP,marginTop:20,opacity:oppvarmingValg.length===0?0.5:1}}
                 disabled={oppvarmingValg.length===0}
                 onClick={bekreft}
@@ -1651,20 +1683,26 @@ export default function App() {
         <div style={S.app}>
           <Header onBack={()=>steg===0?nullstill():setSteg(steg-1)} onHome={nullstill}/>
           <div style={S.wrap}>
-            <div style={S.prog}><div style={S.fill((steg/STEG.length)*100)}/></div>
-            <div style={{textAlign:"center",marginBottom:28}}>
-              <div style={S.tag}>Spørsmål {steg+1} av {STEG.length}</div>
-              <h2 style={{fontFamily:"Georgia,serif",fontWeight:800,fontSize:"clamp(1.3rem,4vw,1.8rem)",color:C.navyDark,marginBottom:8}}>{s.tittel}</h2>
-              <p style={S.sub}>{s.hint}</p>
-            </div>
-            <div style={S.grid}>
-              {s.valg.map(v=>(
-                <button key={String(v.verdi)} style={S.btn(svar[s.id]===v.verdi)} onClick={()=>velg(v.verdi)}
-                  onMouseEnter={e=>{if(svar[s.id]!==v.verdi){e.currentTarget.style.borderColor=C.navy;e.currentTarget.style.transform="translateY(-2px)";}}}
-                  onMouseLeave={e=>{if(svar[s.id]!==v.verdi){e.currentTarget.style.borderColor=C.border;e.currentTarget.style.transform="";}}}>
-                  <span style={S.ikon}>{v.ikon}</span>{v.label}
-                </button>
+            {/* Pill progress */}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,marginBottom:32}}>
+              {STEG.map((_,i)=>(
+                <div key={i} style={{height:5,borderRadius:100,transition:"all .45s cubic-bezier(.4,0,.2,1)",background:i<steg?C.green:i===steg?C.navy:"rgba(27,58,92,0.14)",width:i===steg?28:8}}/>
               ))}
+            </div>
+            <div key={steg} className="be-slide-in">
+              <div style={{textAlign:"center",marginBottom:32}}>
+                <div style={S.tag}>Spørsmål {steg+1} av {STEG.length}</div>
+                <h2 style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"clamp(1.4rem,4.5vw,2rem)",color:C.navyDark,marginBottom:10,lineHeight:1.15}}>{s.tittel}</h2>
+                <p style={S.sub}>{s.hint}</p>
+              </div>
+              <div style={S.grid}>
+                {s.valg.map(v=>(
+                  <button key={String(v.verdi)} className="be-choice" style={S.btn(svar[s.id]===v.verdi)} onClick={()=>velg(v.verdi)}>
+                    {svar[s.id]===v.verdi && <span style={{position:"absolute",top:8,right:8,width:18,height:18,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.6rem",fontWeight:900,color:"#fff",boxShadow:`0 2px 6px ${C.green}80`}}>✓</span>}
+                    <span style={S.ikon}>{v.ikon}</span>{v.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -1679,20 +1717,60 @@ export default function App() {
       <div style={S.app}>
         <Header onHome={nullstill}/>
         <div style={S.wrap}>
-          <div style={{textAlign:"center",marginBottom:36,paddingTop:16}}>
-            <div style={S.tag}>Gratis energianalyse</div>
-            <h1 style={S.h1}>Hva er energimerket<br/>på din bolig?</h1>
-            <p style={{...S.sub,maxWidth:420,margin:"0 auto"}}>Finn energimerke A–G, se hvilke tiltak som lønner seg og hvor mye Enova-støtte du kan få.</p>
+          {/* Hero */}
+          <div className="be-in" style={{textAlign:"center",marginBottom:36,paddingTop:20,position:"relative"}}>
+            <div style={{position:"absolute",top:-30,left:"50%",transform:"translateX(-50%)",width:360,height:280,background:`radial-gradient(circle,${C.green}1A 0%,transparent 68%)`,pointerEvents:"none",zIndex:0}}/>
+            <div style={{position:"relative",zIndex:1}}>
+              <div style={{display:"inline-flex",alignItems:"center",gap:8,background:`${C.green}14`,border:`1px solid ${C.green}30`,borderRadius:100,padding:"6px 16px",marginBottom:18}}>
+                <div style={{width:7,height:7,borderRadius:"50%",background:C.green,flexShrink:0}}/>
+                <span style={{fontSize:"0.7rem",fontWeight:800,letterSpacing:"0.12em",textTransform:"uppercase",color:C.green}}>Gratis energianalyse</span>
+              </div>
+              <h1 style={{...S.h1,fontSize:"clamp(2rem,6vw,2.8rem)",marginBottom:14}}>
+                Hva er energimerket<br/><em style={{fontStyle:"italic",color:C.navy}}>på din bolig?</em>
+              </h1>
+              <p style={{...S.sub,maxWidth:400,margin:"0 auto 20px"}}>Finn energimerke A–G, se hvilke tiltak som lønner seg og hvor mye Enova-støtte du kan få.</p>
+              <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:20,flexWrap:"wrap"}}>
+                {["3 200+ boliger analysert","Enova aug 2025","ISO 52000"].map(x=>(
+                  <span key={x} style={{fontSize:"0.72rem",color:C.muted,display:"flex",alignItems:"center",gap:5}}>
+                    <span style={{color:C.green,fontWeight:900}}>✓</span>{x}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
-          <div style={{display:"grid",gap:14}}>
-            <div style={{...S.card,cursor:"pointer",textAlign:"center"}} onClick={()=>setSkjerm("enkel")}
-              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 16px 48px rgba(27,58,92,0.14)";}}
-              onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>
-              <div style={{fontSize:"2.2rem",marginBottom:10}}>🏠</div>
-              <div style={{fontWeight:800,fontSize:"1.1rem",color:C.navyDark,marginBottom:5}}>Enkel analyse</div>
-              <div style={{...S.sub,marginBottom:16}}>6 spørsmål · 2 minutter · Ingen fagkunnskap nødvendig</div>
-              <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,color:C.white,borderRadius:10,padding:"12px 28px",fontWeight:700,fontSize:"0.95rem",display:"inline-block"}}>Start her →</div>
-              <div style={{fontSize:"0.75rem",color:C.muted,marginTop:12}}>💡 Enova-støtte opptil 136 000 kr — søk før håndverkerne er fullt booket</div>
+
+          {/* How it works strip */}
+          <div className="be-in-1" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
+            {[
+              {n:"01",t:"6 spørsmål",d:"Boligtype, byggeår og oppvarming"},
+              {n:"02",t:"Energimerke A–G",d:"Beregnet etter ISO 52000"},
+              {n:"03",t:"Sparepotensial",d:"Tiltak, støtte og tilbakebetaling"},
+            ].map(x=>(
+              <div key={x.n} style={{background:C.white,borderRadius:16,padding:"16px 12px",border:`1px solid ${C.border}`,textAlign:"center",boxShadow:"0 2px 8px rgba(13,34,56,0.05)"}}>
+                <div style={{fontFamily:"'Fraunces',Georgia,serif",fontSize:"1.3rem",fontWeight:900,color:C.green,marginBottom:5,lineHeight:1}}>{x.n}</div>
+                <div style={{fontWeight:700,fontSize:"0.78rem",color:C.navyDark,marginBottom:3}}>{x.t}</div>
+                <div style={{fontSize:"0.7rem",color:C.muted,lineHeight:1.4}}>{x.d}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="be-in-2" style={{display:"grid",gap:14}}>
+            <div className="be-card" style={{...S.card,cursor:"pointer",textAlign:"center",borderTop:`3px solid ${C.green}`,paddingTop:26}} onClick={()=>setSkjerm("enkel")}>
+              {/* Energy grade color strip */}
+              <div style={{display:"flex",justifyContent:"center",gap:4,marginBottom:18}}>
+                {ENERGIMERKER.map(em=>(
+                  <div key={em.merke} style={{width:30,height:8,borderRadius:3,background:em.farge,opacity:0.7}}/>
+                ))}
+              </div>
+              <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.3rem",color:C.navyDark,marginBottom:6}}>Enkel analyse</div>
+              <div style={{...S.sub,marginBottom:22}}>6 spørsmål · 2 minutter · Ingen fagkunnskap nødvendig</div>
+              <div className="be-cta-btn" style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,color:C.white,borderRadius:12,padding:"14px 36px",fontWeight:700,fontSize:"0.98rem",display:"inline-block",boxShadow:"0 4px 20px rgba(27,58,92,0.30)",letterSpacing:"-0.01em",cursor:"pointer"}}>
+                Start gratis analyse →
+              </div>
+              <div style={{fontSize:"0.74rem",color:C.muted,marginTop:14,display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                <span style={{color:C.gold}}>💡</span>
+                Enova-støtte opptil 136 000 kr · Ingen registrering
+              </div>
             </div>
           </div>
 
