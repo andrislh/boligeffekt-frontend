@@ -1739,22 +1739,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* How it works strip */}
-          <div className="be-in-1 be-grid-3" style={{marginBottom:14}}>
-            {[
-              {n:"01",t:"6 spørsmål",d:"Boligtype, byggeår og oppvarming"},
-              {n:"02",t:"Energimerke A–G",d:"Beregnet etter ISO 52000"},
-              {n:"03",t:"Sparepotensial",d:"Tiltak, støtte og tilbakebetaling"},
-            ].map(x=>(
-              <div key={x.n} style={{background:C.white,borderRadius:16,padding:"16px 12px",border:`1px solid ${C.border}`,textAlign:"center",boxShadow:"0 2px 8px rgba(13,34,56,0.05)"}}>
-                <div style={{fontFamily:"'Fraunces',Georgia,serif",fontSize:"1.3rem",fontWeight:900,color:C.green,marginBottom:5,lineHeight:1}}>{x.n}</div>
-                <div style={{fontWeight:700,fontSize:"0.78rem",color:C.navyDark,marginBottom:3}}>{x.t}</div>
-                <div style={{fontSize:"0.7rem",color:C.muted,lineHeight:1.4}}>{x.d}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="be-in-2" style={{display:"grid",gap:14}}>
+          <div className="be-in-1" style={{display:"grid",gap:14}}>
             <div className="be-card" style={{...S.card,cursor:"pointer",textAlign:"center",borderTop:`3px solid ${C.green}`,paddingTop:26}} onClick={()=>setSkjerm("enkel")}>
               {/* Energy grade color strip */}
               <div style={{display:"flex",justifyContent:"center",gap:4,marginBottom:18}}>
@@ -1771,6 +1756,98 @@ export default function App() {
                 <span style={{color:C.gold}}>💡</span>
                 Enova-støtte opptil 136 000 kr · Ingen registrering
               </div>
+            </div>
+          </div>
+
+          {/* ── Slik fungerer det ───────────────────────────── */}
+          <div style={{marginTop:44}}>
+            <div style={{textAlign:"center",marginBottom:32}}>
+              <div style={{display:"inline-flex",alignItems:"center",gap:7,background:`${C.green}18`,borderRadius:24,padding:"5px 14px",marginBottom:14}}>
+                <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill={C.green}/></svg>
+                <span style={{fontSize:"0.7rem",fontWeight:700,letterSpacing:"0.12em",color:C.green,textTransform:"uppercase"}}>Slik fungerer det</span>
+              </div>
+              <h2 style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:800,fontSize:"clamp(1.2rem,3.5vw,1.55rem)",color:C.navyDark,margin:"0 0 10px"}}>Fra bolig til handlingsplan</h2>
+              <p style={{fontSize:"0.84rem",color:C.muted,margin:"0 auto",maxWidth:360,lineHeight:1.6}}>Tre enkle steg — resultater basert på norske standarder og Enova-satser for 2025.</p>
+            </div>
+
+            <div className="be-grid-3" style={{gap:14}}>
+
+              {/* Steg 1 */}
+              <div className="be-card" style={{background:C.white,borderRadius:22,padding:"28px 20px 24px",textAlign:"center",boxShadow:"0 2px 20px rgba(27,58,92,0.07)",overflow:"hidden",position:"relative"}}>
+                <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${C.navy},${C.navyMid})`}}/>
+                <div style={{marginBottom:18,display:"flex",justifyContent:"center",alignItems:"center",height:80}}>
+                  <svg width="76" height="76" viewBox="0 0 76 76" fill="none">
+                    <path d="M38 8L8 34h7v28h46V34h7L38 8z" fill={`${C.navy}0f`} stroke={C.navy} strokeWidth="2" strokeLinejoin="round"/>
+                    <rect x="30" y="44" width="16" height="18" rx="2.5" fill={`${C.navy}18`} stroke={C.navy} strokeWidth="1.5"/>
+                    <rect x="14" y="39" width="11" height="10" rx="2" fill={`${C.navy}14`} stroke={C.navy} strokeWidth="1.5"/>
+                    <line x1="19.5" y1="39" x2="19.5" y2="49" stroke={C.navy} strokeWidth="1" opacity="0.4"/>
+                    <line x1="14" y1="44" x2="25" y2="44" stroke={C.navy} strokeWidth="1" opacity="0.4"/>
+                    <rect x="50" y="16" width="22" height="5" rx="2.5" fill={`${C.green}30`}/>
+                    <rect x="50" y="24" width="18" height="5" rx="2.5" fill={`${C.green}22`}/>
+                    <rect x="50" y="32" width="20" height="5" rx="2.5" fill={`${C.green}18`}/>
+                    <circle cx="47" cy="18.5" r="3.5" fill="none" stroke={C.green} strokeWidth="1.5" opacity="0.7"/>
+                    <path d="M45.4 18.5l1.3 1.4 2.2-2.2" stroke={C.green} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>
+                    <circle cx="47" cy="26.5" r="3.5" fill="none" stroke={C.green} strokeWidth="1.5" opacity="0.5"/>
+                    <circle cx="47" cy="34.5" r="3.5" fill="none" stroke={C.green} strokeWidth="1.5" opacity="0.35"/>
+                    <rect x="52" y="18" width="5" height="9" rx="1" fill={`${C.navy}20`} stroke={C.navy} strokeWidth="1.2"/>
+                    <path d="M53.5 17c0-2 1.5-2 1.5-4s-1.5-2-1.5-4" stroke={C.muted} strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.4"/>
+                  </svg>
+                </div>
+                <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:800,fontSize:"1rem",color:C.navyDark,marginBottom:7}}>6 spørsmål om boligen</div>
+                <div style={{fontSize:"0.8rem",color:C.muted,lineHeight:1.65}}>Boligtype, byggeår, areal og oppvarming. Tar under 2 minutter — ingen fagkunnskap nødvendig.</div>
+              </div>
+
+              {/* Steg 2 */}
+              <div className="be-card" style={{background:C.white,borderRadius:22,padding:"28px 20px 24px",textAlign:"center",boxShadow:"0 2px 20px rgba(27,58,92,0.07)",overflow:"hidden",position:"relative"}}>
+                <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${C.green},${C.greenLight})`}}/>
+                <div style={{marginBottom:18,display:"flex",justifyContent:"center",alignItems:"center",height:80}}>
+                  <svg width="68" height="76" viewBox="0 0 68 76" fill="none">
+                    {[
+                      {label:"A",w:52,color:"#16a34a",y:4,active:true},
+                      {label:"B",w:44,color:"#4ade80",y:16,active:false},
+                      {label:"C",w:38,color:"#a3e635",y:28,active:false},
+                      {label:"D",w:32,color:"#facc15",y:40,active:false},
+                      {label:"E",w:26,color:"#fb923c",y:52,active:false},
+                      {label:"F",w:20,color:"#f87171",y:64,active:false},
+                    ].map(({label,w,color,y,active})=>(
+                      <g key={label} opacity={active?1:0.45}>
+                        <rect x="4" y={y} width={w} height="10" rx="2" fill={color}/>
+                        <path d={`M${4+w} ${y}l6 5-6 5z`} fill={color}/>
+                        <text x="10" y={y+7.5} fontSize="6.5" fontWeight="800" fill={active?"white":"#444"} fontFamily="Georgia, serif">{label}</text>
+                        {active && <rect x="2" y={y-2} width={w+10} height="14" rx="3" fill="none" stroke={color} strokeWidth="1.5" opacity="0.6"/>}
+                      </g>
+                    ))}
+                  </svg>
+                </div>
+                <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:800,fontSize:"1rem",color:C.navyDark,marginBottom:7}}>Energimerke A–G</div>
+                <div style={{fontSize:"0.8rem",color:C.muted,lineHeight:1.65}}>Beregnet etter NS-EN ISO 52000 og EPBD 2024. Gratis og øyeblikkelig — se hvor du står.</div>
+              </div>
+
+              {/* Steg 3 */}
+              <div className="be-card" style={{background:C.white,borderRadius:22,padding:"28px 20px 24px",textAlign:"center",boxShadow:"0 2px 20px rgba(27,58,92,0.07)",overflow:"hidden",position:"relative"}}>
+                <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${C.gold},#f5a623)`}}/>
+                <div style={{marginBottom:18,display:"flex",justifyContent:"center",alignItems:"center",height:80}}>
+                  <svg width="76" height="76" viewBox="0 0 76 76" fill="none">
+                    <rect x="8" y="8" width="40" height="54" rx="5" fill={`${C.navy}0d`} stroke={C.navy} strokeWidth="1.5"/>
+                    <path d="M38 8l10 10h-10V8z" fill={`${C.navy}20`} stroke={C.navy} strokeWidth="1.2" strokeLinejoin="round"/>
+                    <rect x="14" y="24" width="26" height="2.5" rx="1.25" fill={C.navy} opacity="0.25"/>
+                    <rect x="14" y="30" width="20" height="2.5" rx="1.25" fill={C.navy} opacity="0.18"/>
+                    <rect x="14" y="50" width="6" height="8" rx="1.5" fill={C.navy} opacity="0.25"/>
+                    <rect x="22" y="44" width="6" height="14" rx="1.5" fill={C.navy} opacity="0.35"/>
+                    <rect x="30" y="38" width="6" height="20" rx="1.5" fill={C.green} opacity="0.8"/>
+                    <path d="M14 52l6-8 8-4 8-8" stroke={C.green} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" opacity="0.6"/>
+                    <circle cx="58" cy="26" r="16" fill={C.gold} opacity="0.12"/>
+                    <circle cx="58" cy="26" r="12" fill={C.gold} opacity="0.2"/>
+                    <circle cx="58" cy="26" r="9" fill={C.gold} opacity="0.9"/>
+                    <text x="53.5" y="29.5" fontSize="8.5" fontWeight="800" fill="white" fontFamily="Georgia, serif">kr</text>
+                    <path d="M68 14l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z" fill={C.gold} opacity="0.7"/>
+                    <path d="M70 44l.7 1.7 1.7.7-1.7.7-.7 1.7-.7-1.7-1.7-.7 1.7-.7z" fill={C.gold} opacity="0.5"/>
+                  </svg>
+                </div>
+                <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:800,fontSize:"1rem",color:C.navyDark,marginBottom:7}}>Sparepotensial og støtte</div>
+                <div style={{fontSize:"0.8rem",color:C.muted,lineHeight:1.65}}>Tilpassede tiltak, Enova-støtte opptil 136 000 kr og full ROI-analyse med tilbakebetalingstid.</div>
+              </div>
+
             </div>
           </div>
 
