@@ -241,8 +241,9 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
       const data = await res.json();
       if (data.url) window.location.href = data.url;
       else { setFeil("Noe gikk galt – prøv igjen."); setLaster(false); }
-    } catch(_) {
-      onBetalt(epost);
+    } catch(err) {
+      console.error("[betal] feil:", err);
+      setFeil("Kunne ikke koble til betalingstjenesten – prøv igjen eller kontakt support.");
       setLaster(false);
     }
   }
