@@ -275,7 +275,7 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
       <div style={S.wrap}>
         {/* Gratis – energimerke */}
         <div className="be-in" style={{...S.card,background:`linear-gradient(150deg,${merke.farge}14 0%,${C.white} 55%)`,border:`1.5px solid ${merke.farge}35`}}>
-          <div style={{display:"flex",alignItems:"center",gap:20,marginBottom:22}}>
+          <div className="be-merke-row" style={{display:"flex",alignItems:"center",gap:20,marginBottom:22}}>
             <Merke m={merke} stor reveal/>
             <div>
               <div style={S.tag}>Estimert energimerke</div>
@@ -331,7 +331,7 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
             {feil && <div style={{color:"#DC2626",fontSize:"0.8rem",marginTop:6,display:"flex",alignItems:"center",gap:4}}><span>⚠</span>{feil}</div>}
           </div>
           <div style={{background:C.section,borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:"0.78rem",color:C.muted,lineHeight:1.55,textAlign:"center"}}>
-            En energirådgiver koster <strong style={{color:C.navyDark}}>9 000–20 000 kr</strong>. Her får du den samme analysen for <strong style={{color:C.navyDark}}>399 kr</strong>.
+            En offisiell energirådgiver koster <strong style={{color:C.navyDark}}>9 000–20 000 kr</strong>. Få et detaljert energiestimatt med tiltaksplan for <strong style={{color:C.navyDark}}>399 kr</strong>.
           </div>
           <div style={{display:"flex",justifyContent:"center",gap:16,marginBottom:12}}>
             {[{i:"💳",t:"Kortbetaling"},{i:"🔒",t:"Stripe"},{i:"📄",t:"PDF på e-post"}].map(x=>(
@@ -497,7 +497,7 @@ function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
               <div style={S.h2}>Din kombinasjonsanalyse</div>
               <div style={{...S.sub,marginBottom:16}}>{valgte.size} tiltak valgt</div>
               <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,borderRadius:14,padding:"18px",marginBottom:16}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+                <div className="be-grid-2" style={{gap:12,marginBottom:14}}>
                   {[
                     {l:"Total årsbesparelse",v:`${totBes.toLocaleString("no")} kr`,c:C.greenLight},
                     {l:"Tilbakebetalingstid", v:`${breakEven}${typeof breakEven==="number"?" år":""}`,c:C.white},
@@ -698,7 +698,7 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
 
         {/* Energimerke */}
         <div style={S.card}>
-          <div style={{display:"flex",alignItems:"center",gap:18,marginBottom:20}}>
+          <div className="be-merke-row" style={{display:"flex",alignItems:"center",gap:18,marginBottom:20}}>
             <Merke m={merke} stor reveal/>
             <div>
               <div style={S.tag}>Energimerke</div>
@@ -706,7 +706,7 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
               <div style={{fontSize:"0.82rem",color:C.muted}}>{resultat.bygData.label} · {resultat.klima.label.split("(")[0].trim()}</div>
             </div>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:18}}>
+          <div className="be-grid-3" style={{marginBottom:18}}>
             {[{l:"Levert energi",v:kwhPerM2,e:"kWh/m²/år"},{l:"Totalt forbruk",v:totalKwh.toLocaleString("no"),e:"kWh/år"},{l:"Strømkostnad",v:strømkostnad.toLocaleString("no"),e:"kr/år"}].map(x=>(
               <div key={x.l} style={{background:C.section,borderRadius:12,padding:"13px 10px",textAlign:"center"}}>
                 <div style={{fontSize:"0.64rem",fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:3}}>{x.l}</div>
@@ -754,7 +754,7 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
         {høy.length > 0 && (
           <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,borderRadius:16,padding:"20px",marginBottom:16}}>
             <div style={{color:C.white,fontWeight:800,marginBottom:12}}>⚡ Ditt forbedringspotensial</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+            <div className="be-grid-3" style={{gap:10}}>
               {[{v:totalStøtte.toLocaleString("no")+" kr",l:"Mulig Enova-støtte"},{v:totalBesparelse.toLocaleString("no")+" kr",l:"Estimert årsbesparelse"},{v:høy.length+" tiltak",l:"Høy prioritet"}].map(x=>(
                 <div key={x.l} style={{textAlign:"center"}}>
                   <div style={{fontSize:"1.25rem",fontWeight:900,color:C.greenLight}}>{x.v}</div>
@@ -786,7 +786,7 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
                   {t.prioritet==="lav"    && <span style={{background:"#ddd",color:"#666",borderRadius:100,padding:"3px 10px",fontSize:"0.68rem",fontWeight:700,whiteSpace:"nowrap"}}>Lang sikt</span>}
                 </div>
                 <div style={{fontSize:"0.8rem",color:C.muted,marginBottom:12,lineHeight:1.55}}>{t.beskrivelse}</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
+                <div className="be-grid-4" style={{gap:6}}>
                   {[
                     {l:"Enova-støtte",v:`${t.støtte_min/1000}–${t.støtte_max/1000}k kr`,c:C.green},
                     {l:"Est. kostnad",v:`${Math.round(t.kostnad_min/1000)}–${Math.round(t.kostnad_max/1000)}k kr`,c:C.navyDark},
@@ -863,7 +863,7 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
               <div style={S.card}>
                 <div style={S.h2}>💰 Økonomianalyse</div>
                 <div style={{...S.sub,marginBottom:16}}>Totalbilde for alle anbefalte tiltak</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                <div className="be-grid-2" style={{marginBottom:10}}>
                   {[
                     { l:"Total investering",        v:`${Math.round(totInv/1000)} 000 kr`,  c:C.navyDark },
                     { l:"Total Enova-støtte",        v:`${Math.round(totStøtte/1000)} 000 kr`, c:C.green },
@@ -890,12 +890,12 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
                 <div style={{...S.sub,marginBottom:16}}>Prioritert rekkefølge for maksimal effekt</div>
                 {bestTiltak && (
                   <div style={{background:`linear-gradient(135deg,${C.green}18,${C.greenLight}10)`,border:`2px solid ${C.green}50`,borderRadius:14,padding:"16px 18px",marginBottom:14}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                    <div className="be-beste-row" style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                       <div style={{fontWeight:800,fontSize:"0.95rem",color:C.navyDark}}>{bestTiltak.ikon} {bestTiltak.navn}</div>
-                      <span style={{background:C.green,color:C.white,borderRadius:100,padding:"3px 10px",fontSize:"0.68rem",fontWeight:800}}>BESTE INVESTERING NÅ</span>
+                      <span style={{background:C.green,color:C.white,borderRadius:100,padding:"3px 10px",fontSize:"0.68rem",fontWeight:800,flexShrink:0}}>BESTE INVESTERING NÅ</span>
                     </div>
                     <div style={{fontSize:"0.8rem",color:C.muted,marginBottom:10}}>{bestTiltak.beskrivelse}</div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                    <div className="be-grid-3" style={{gap:8}}>
                       {[
                         {l:"Tilbakebetaling",v:bestTiltak.tilbakebetaling<=30?`${bestTiltak.tilbakebetaling} år`:">30 år"},
                         {l:"Enova-støtte",v:`inntil ${(bestTiltak.støtte_max/1000).toFixed(0)}k kr`},
@@ -1740,7 +1740,7 @@ export default function App() {
           </div>
 
           {/* How it works strip */}
-          <div className="be-in-1" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
+          <div className="be-in-1 be-grid-3" style={{marginBottom:14}}>
             {[
               {n:"01",t:"6 spørsmål",d:"Boligtype, byggeår og oppvarming"},
               {n:"02",t:"Energimerke A–G",d:"Beregnet etter ISO 52000"},
