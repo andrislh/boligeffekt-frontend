@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { track } from "@vercel/analytics";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
 const PAKKE = { navn: "Komplett rapport", pris: 399, beløp: 39900 };
@@ -250,11 +251,16 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
   const { merke, kwhPerM2, tiltak } = resultat;
   const høy = tiltak.filter(t => t.prioritet === "høy");
 
+  useEffect(() => {
+    track("paywall_viewed", { grade: merke.merke });
+  }, [merke.merke]);
+
   async function betal() {
     if (!epost.includes("@")) { setFeil("Skriv inn en gyldig e-postadresse"); return; }
     setFeil(""); setLaster(true);
     const resultatId = lagId(input);
     lagreData({ resultat, input, epost, pakke: "oppgraderingsplan" });
+    track("checkout_started");
     try {
       const res  = await fetch(`${BACKEND}/api/create-checkout`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -1488,6 +1494,7 @@ export default function App() {
     setSessionId(sessionId);
     setBetalt(true);
     setSkjerm("resultat");
+    track("purchase_completed", { value: 399, currency: "NOK" });
 
     window.history.replaceState({}, "", "/");
   }, []);
@@ -1499,6 +1506,7 @@ export default function App() {
     setInput(inp);
     setBetalt(false);
     setSkjerm("resultat");
+    track("quiz_completed", { grade: r.merke.merke });
   }
 
   function velg(verdi) {
@@ -1740,7 +1748,7 @@ export default function App() {
           </div>
 
           <div className="be-in-1" style={{display:"grid",gap:14}}>
-            <div className="be-card" style={{...S.card,cursor:"pointer",textAlign:"center",borderTop:`3px solid ${C.green}`,paddingTop:26}} onClick={()=>setSkjerm("enkel")}>
+            <div className="be-card" style={{...S.card,cursor:"pointer",textAlign:"center",borderTop:`3px solid ${C.green}`,paddingTop:26}} onClick={()=>{ track("quiz_started"); setSkjerm("enkel"); }}>
               {/* Energy grade color strip */}
               <div style={{display:"flex",justifyContent:"center",gap:4,marginBottom:18}}>
                 {ENERGIMERKER.map(em=>(
