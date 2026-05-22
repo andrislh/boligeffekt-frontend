@@ -130,7 +130,7 @@ function beregnTiltak(resultat, input) {
   // Worse energy grade → more urgent → higher effective priority thresholds
   const gradeFaktor = { A: 0.6, B: 0.75, C: 0.9, D: 1.0, E: 1.4, F: 1.8, G: 2.2 }[resultat.merke.merke] || 1.0;
 
-  return TILTAK.filter(t => {
+  const resultatListe = TILTAK.filter(t => {
     if (Array.isArray(input.oppvarming)) {
       if (t.krever_ikke.some(k => input.oppvarming.some(o => o.kilde === k))) return false;
     } else {
@@ -152,6 +152,13 @@ function beregnTiltak(resultat, input) {
     const prioritet     = tilbake <= effTerskel ? "høy" : tilbake <= effTerskel * 1.8 ? "middels" : "lav";
     return { ...t, besparelse_kr, støtte_snitt, kostnad_snitt, netto, tilbakebetaling: tilbake, prioritet };
   }).sort((a, b) => a.tilbakebetaling - b.tilbakebetaling);
+
+  // Marker topp 3 som "anbefalt": balanserer kWh-besparelse (karakter + strøm)
+  // mot tilbakebetalingstid (ROI). Brukes i UI - "Anbefalt"-badgen og som
+  // standardvalg i OppgraderingsFlow.
+  const score = t => (t.kWh_pct || 0) - (t.tilbakebetaling || 99) / 100;
+  const topp = [...resultatListe].sort((a, b) => score(b) - score(a)).slice(0, 3).map(t => t.id);
+  return resultatListe.map(t => ({ ...t, anbefalt: topp.includes(t.id) }));
 }
 
 // Session-lagring
@@ -364,7 +371,7 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
 function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNullstill }) {
   const [steg, setSteg]     = useState(1);
   const [valgte, setValgte] = useState(
-    () => new Set(resultat.tiltak.filter(t => t.prioritet === "høy").map(t => t.id))
+    () => new Set(resultat.tiltak.filter(t => t.anbefalt).map(t => t.id))
   );
   const [sender, setSender]         = useState(false);
   const [feil, setFeil]             = useState("");
@@ -484,8 +491,8 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
                     <div style={{flex:1}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:6}}>
                         <div style={{fontWeight:700,fontSize:"0.9rem",color:C.navyDark}}>{t.ikon} {t.navn}</div>
-                        {t.prioritet==="høy"    && <span style={{background:C.green,color:C.white,borderRadius:100,padding:"2px 9px",fontSize:"0.65rem",fontWeight:800,whiteSpace:"nowrap",flexShrink:0}}>Anbefalt</span>}
-                        {t.prioritet==="middels"&& <span style={{background:C.gold,color:C.white,borderRadius:100,padding:"2px 9px",fontSize:"0.65rem",fontWeight:800,whiteSpace:"nowrap",flexShrink:0}}>Vurder</span>}
+                        {t.anbefalt          && <span style={{background:C.green,color:C.white,borderRadius:100,padding:"2px 9px",fontSize:"0.65rem",fontWeight:800,whiteSpace:"nowrap",flexShrink:0}}>Anbefalt</span>}
+                        {!t.anbefalt && t.prioritet==="høy"    && <span style={{background:C.gold,color:C.white,borderRadius:100,padding:"2px 9px",fontSize:"0.65rem",fontWeight:800,whiteSpace:"nowrap",flexShrink:0}}>God ROI</span>}
                       </div>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                         <div style={{background:C.section,borderRadius:8,padding:"7px 10px"}}>
