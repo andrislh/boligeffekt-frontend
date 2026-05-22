@@ -155,9 +155,21 @@ function beregnTiltak(resultat, input) {
 
   // Marker topp 3 som "anbefalt": balanserer kWh-besparelse (karakter + strøm)
   // mot tilbakebetalingstid (ROI). Brukes i UI - "Anbefalt"-badgen og som
-  // standardvalg i OppgraderingsFlow.
+  // standardvalg i OppgraderingsFlow. Begrens til maks én varmepumpe i topp 3
+  // - du installerer ikke luft/luft + luft/vann + bergvarme samtidig.
   const score = t => (t.kWh_pct || 0) - (t.tilbakebetaling || 99) / 100;
-  const topp = [...resultatListe].sort((a, b) => score(b) - score(a)).slice(0, 3).map(t => t.id);
+  const erVarmepumpe = id => id === "varmepumpe_ll" || id === "varmepumpe_lv" || id === "bergvarme";
+  const sortertScore = [...resultatListe].sort((a, b) => score(b) - score(a));
+  const topp = [];
+  let varmepumpeValgt = false;
+  for (const t of sortertScore) {
+    if (topp.length >= 3) break;
+    if (erVarmepumpe(t.id)) {
+      if (varmepumpeValgt) continue;
+      varmepumpeValgt = true;
+    }
+    topp.push(t.id);
+  }
   return resultatListe.map(t => ({ ...t, anbefalt: topp.includes(t.id) }));
 }
 
