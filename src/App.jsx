@@ -3,6 +3,7 @@ import { track } from "@vercel/analytics";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
 const PAKKE = { navn: "Komplett rapport", pris: 399, beløp: 39900 };
+const FREE_MODE = process.env.REACT_APP_FREE_MODE === "true";
 
 // ─────────────────────────────────────────────
 // BEREGNINGSDATA
@@ -171,6 +172,7 @@ const STEG = [
   { id: "oppvarming",   tittel: "Hvordan varmer du opp boligen?", hint: "Velg opptil 3 oppvarmingskilder",              valg: OPPVARMING_VALG },
   { id: "vinduer_type", tittel: "Hva slags vinduer har du?",     hint: "Vinduer er en stor kilde til varmetap",
     valg: [{label:"Enkeltglass / eldre",verdi:"enkelt",ikon:"🥶"},{label:"2-lags isolerglass",verdi:"dobbel",ikon:"🪟"},{label:"3-lags / nye",verdi:"trippel",ikon:"✨"}] },
+  { id: "adresse", tittel: "Boligens adresse (valgfritt)", hint: "Vises på rapporten - vi henter ingen data fra adressen", tekstfelt: true },
 ];
 
 // ─────────────────────────────────────────────
@@ -359,7 +361,7 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
 // ─────────────────────────────────────────────
 // OPPGRADERINGSFLOW (Premium – interaktiv 3-steg)
 // ─────────────────────────────────────────────
-function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
+function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNullstill }) {
   const [steg, setSteg]     = useState(1);
   const [valgte, setValgte] = useState(
     () => new Set(resultat.tiltak.filter(t => t.prioritet === "høy").map(t => t.id))
@@ -370,6 +372,8 @@ function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
   const [leadTlf, setLeadTlf]       = useState("");
   const [leadSendt, setLeadSendt]   = useState(false);
   const [leadLaster, setLeadLaster] = useState(false);
+  const [freeEpost, setFreeEpost]   = useState("");
+  const epost = epostProp || freeEpost;
 
   const valgTiltak  = resultat.tiltak.filter(t => valgte.has(t.id));
   const totInv      = valgTiltak.reduce((s, t) => s + t.kostnad_snitt, 0);
@@ -390,16 +394,21 @@ function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
   }
 
   async function sendRapport() {
+    if (FREE_MODE && !epost.includes("@")) {
+      setFeil("Skriv inn en gyldig e-postadresse");
+      return;
+    }
     setSender(true); setFeil("");
     try {
       const res = await fetch(`${BACKEND}/api/send-rapport`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          session_id:   sessionId,
+          session_id:   sessionId || (FREE_MODE ? `free_${Date.now()}` : null),
           resultatData: { resultat: { ...resultat, tiltak: valgTiltak }, input, epost, pakke: "oppgraderingsplan" },
           epost,
           pakke:        "oppgraderingsplan",
+          free_mode:    FREE_MODE,
         }),
       });
       const data = await res.json();
@@ -417,6 +426,12 @@ function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
     <div style={S.app}>
       <Header onHome={onNullstill}/>
       <div style={S.wrap}>
+
+        {input?.adresse && (
+          <div style={{textAlign:"center",fontSize:"0.78rem",color:C.muted,marginBottom:14}}>
+            <span style={{fontWeight:700,color:C.navyDark}}>{input.adresse}</span>
+          </div>
+        )}
 
         {/* Steg-indikator */}
         {steg < 3 && (
@@ -562,13 +577,25 @@ function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
                 </div>
               ))}
             </div>
+            {FREE_MODE && !epostProp && (
+              <div style={{...S.card,background:`${C.green}08`,border:`1.5px solid ${C.green}35`,marginBottom:12}}>
+                <label style={S.lbl}>E-postadresse <span style={{color:C.muted,fontWeight:400}}>(rapport sendes hit som PDF)</span></label>
+                <input
+                  style={S.inp}
+                  type="email"
+                  placeholder="navn@epost.no"
+                  value={freeEpost}
+                  onChange={e => setFreeEpost(e.target.value)}
+                />
+              </div>
+            )}
             {feil && <div style={{background:"#fff0f0",border:"1px solid #fcc",borderRadius:10,padding:"12px 14px",fontSize:"0.83rem",color:"#c53030",marginBottom:12}}>{feil}</div>}
             <button
               style={{...S.btnP,background:sender?"#aaa":`linear-gradient(135deg,${C.green},${C.greenLight})`,boxShadow:`0 6px 20px ${C.green}44`,marginBottom:10,opacity:sender?0.7:1}}
               onClick={sendRapport}
               disabled={sender}
             >
-              {sender ? "Genererer rapport…" : `Generer og send rapport til ${epost} →`}
+              {sender ? "Genererer rapport…" : (epost ? `Generer og send rapport til ${epost} →` : "Generer og send rapport →")}
             </button>
             <button style={{...S.btnG,width:"100%",textAlign:"center"}} onClick={() => setSteg(1)}>← Endre valg</button>
           </>
@@ -651,7 +678,97 @@ function OppgraderingsFlow({ resultat, epost, input, sessionId, onNullstill }) {
           </>
         )}
 
+        {FREE_MODE && <FeedbackBoks merke={resultat?.merke?.merke}/>}
+
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// FEEDBACK-WIDGET (FREE_MODE)
+// ─────────────────────────────────────────────
+function FeedbackBoks({ merke }) {
+  const [valgt, setValgt]     = useState(null);
+  const [kommentar, setKommentar] = useState("");
+  const [sender, setSender]   = useState(false);
+  const [sendt, setSendt]     = useState(false);
+  const [feil, setFeil]       = useState("");
+
+  async function send() {
+    if (!valgt) { setFeil("Velg ett av alternativene over"); return; }
+    setSender(true); setFeil("");
+    try {
+      await fetch(`${BACKEND}/api/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ betalingsvilje: valgt, kommentar: kommentar.slice(0, 1000), merke: merke || "" }),
+      });
+      setSendt(true);
+    } catch (_) {
+      setFeil("Kunne ikke sende. Prøv igjen om litt.");
+    }
+    setSender(false);
+  }
+
+  if (sendt) {
+    return (
+      <div style={{...S.card,background:`${C.green}10`,border:`1.5px solid ${C.green}40`,textAlign:"center",marginTop:24}}>
+        <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:6}}>Tusen takk!</div>
+        <div style={{fontSize:"0.82rem",color:C.muted}}>Tilbakemeldingen din hjelper oss å forbedre BoligEffekt.</div>
+      </div>
+    );
+  }
+
+  const alternativer = [
+    { id: "199", label: "Ja, 199 kr" },
+    { id: "399", label: "Ja, 399 kr" },
+    { id: "nei", label: "Nei" },
+  ];
+
+  return (
+    <div style={{...S.card,marginTop:24,border:`1.5px dashed ${C.green}55`,background:`${C.green}06`}}>
+      <div style={S.tag}>Hjelp oss å forbedre BoligEffekt</div>
+      <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:14}}>
+        Ville du betalt for denne rapporten?
+      </div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+        {alternativer.map(a => (
+          <button
+            key={a.id}
+            onClick={() => setValgt(a.id)}
+            style={{
+              flex:"1 1 100px",
+              padding:"10px 12px",
+              border:`1.5px solid ${valgt===a.id?C.green:C.border}`,
+              background: valgt===a.id ? `${C.green}15` : C.white,
+              color: valgt===a.id ? C.navyDark : C.navy,
+              borderRadius:10,
+              fontWeight:700,
+              fontSize:"0.85rem",
+              cursor:"pointer",
+            }}
+          >
+            {a.label}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={kommentar}
+        onChange={e => setKommentar(e.target.value)}
+        placeholder="Hva synes du om rapporten? (valgfritt)"
+        rows={3}
+        maxLength={1000}
+        style={{...S.inp,resize:"vertical",fontFamily:"inherit",minHeight:64}}
+      />
+      {feil && <div style={{color:"#DC2626",fontSize:"0.78rem",marginTop:8}}>{feil}</div>}
+      <button
+        onClick={send}
+        disabled={sender}
+        style={{...S.btnP,marginTop:12,opacity:sender?0.7:1,background:`linear-gradient(135deg,${C.navy},${C.navyMid})`}}
+      >
+        {sender ? "Sender…" : "Send tilbakemelding"}
+      </button>
     </div>
   );
 }
@@ -1468,7 +1585,7 @@ export default function App() {
   const [steg, setSteg]             = useState(0);
   const [svar, setSvar]             = useState({});
   const [oppvarmingValg, setOppvarmingValg] = useState([]); // [{kilde, andel}]
-  const [avForm, setAvForm]         = useState({ areal:"", byggeår:"", boligtype:"enebolig", klimasone:"3", oppvarming:"direkte_el", vinduer_type:"dobbel", isolering_nivå:"normal", antall_etasjer:2 });
+  const [avForm, setAvForm]         = useState({ areal:"", byggeår:"", boligtype:"enebolig", klimasone:"3", oppvarming:"direkte_el", vinduer_type:"dobbel", isolering_nivå:"normal", antall_etasjer:2, adresse:"" });
   const [resultat, setResultat]     = useState(null);
   const [input, setInput]           = useState(null);
   const [betalt, setBetalt]         = useState(false);
@@ -1506,7 +1623,7 @@ export default function App() {
     const t = beregnTiltak(r, inp);
     setResultat({ ...r, tiltak: t });
     setInput(inp);
-    setBetalt(false);
+    setBetalt(FREE_MODE);
     setSkjerm("resultat");
     track("quiz_completed", { grade: r.merke.merke });
   }
@@ -1515,7 +1632,7 @@ export default function App() {
     const nyttSvar = { ...svar, [STEG[steg].id]: verdi };
     setSvar(nyttSvar);
     if (steg < STEG.length - 1) { setTimeout(() => setSteg(steg + 1), 260); }
-    else lagOgVis({ areal: nyttSvar.areal||100, byggeår: nyttSvar.byggeår||1978, boligtype: nyttSvar.boligtype||"enebolig", klimasone: nyttSvar.klimasone||"3", oppvarming: nyttSvar.oppvarming||"direkte_el", vinduer_type: nyttSvar.vinduer_type||"dobbel", isolering_nivå:"normal", antall_etasjer:2 });
+    else lagOgVis({ areal: nyttSvar.areal||100, byggeår: nyttSvar.byggeår||1978, boligtype: nyttSvar.boligtype||"enebolig", klimasone: nyttSvar.klimasone||"3", oppvarming: nyttSvar.oppvarming||"direkte_el", vinduer_type: nyttSvar.vinduer_type||"dobbel", isolering_nivå:"normal", antall_etasjer:2, adresse: (nyttSvar.adresse||"").trim() });
   }
 
   function nullstill() {
@@ -1563,7 +1680,11 @@ export default function App() {
                 </select>
               </div>
             ))}
-            <button className="be-btn-p" style={S.btnP} onClick={()=>lagOgVis({areal:Number(avForm.areal)||120,byggeår:Number(avForm.byggeår)||1978,boligtype:avForm.boligtype,klimasone:avForm.klimasone,oppvarming:avForm.oppvarming,vinduer_type:avForm.vinduer_type,isolering_nivå:avForm.isolering_nivå,antall_etasjer:Number(avForm.antall_etasjer)||2})}>
+            <div style={{marginBottom:16}}>
+              <label style={S.lbl}>Boligens adresse <span style={{color:C.muted,fontWeight:400}}>(valgfritt – vises kun på rapporten)</span></label>
+              <input style={S.inp} type="text" placeholder="f.eks. Storgata 1, 0001 Oslo" value={avForm.adresse} onChange={e=>setAvForm({...avForm,adresse:e.target.value})}/>
+            </div>
+            <button className="be-btn-p" style={S.btnP} onClick={()=>lagOgVis({areal:Number(avForm.areal)||120,byggeår:Number(avForm.byggeår)||1978,boligtype:avForm.boligtype,klimasone:avForm.klimasone,oppvarming:avForm.oppvarming,vinduer_type:avForm.vinduer_type,isolering_nivå:avForm.isolering_nivå,antall_etasjer:Number(avForm.antall_etasjer)||2,adresse:(avForm.adresse||"").trim()})}>
               Beregn energimerke →
             </button>
           </div>
@@ -1615,7 +1736,7 @@ export default function App() {
         const nyttSvar = { ...svar, oppvarming: verdi };
         setSvar(nyttSvar);
         if (steg < STEG.length - 1) { setTimeout(() => setSteg(steg + 1), 260); }
-        else lagOgVis({ areal: nyttSvar.areal||100, byggeår: nyttSvar.byggeår||1978, boligtype: nyttSvar.boligtype||"enebolig", klimasone: nyttSvar.klimasone||"3", oppvarming: verdi, vinduer_type: nyttSvar.vinduer_type||"dobbel", isolering_nivå:"normal", antall_etasjer:2 });
+        else lagOgVis({ areal: nyttSvar.areal||100, byggeår: nyttSvar.byggeår||1978, boligtype: nyttSvar.boligtype||"enebolig", klimasone: nyttSvar.klimasone||"3", oppvarming: verdi, vinduer_type: nyttSvar.vinduer_type||"dobbel", isolering_nivå:"normal", antall_etasjer:2, adresse: (nyttSvar.adresse||"").trim() });
       };
 
       const LABELS = ["Primær","Sekundær","Tertiær"];
@@ -1680,6 +1801,57 @@ export default function App() {
                 onClick={bekreft}
               >
                 Bekreft valg →
+              </button>
+            </div>
+          </div>
+          <Chatbot/>
+        </>
+      );
+    }
+
+    // Tekstfelt-steg (f.eks. adresse)
+    if (s.tekstfelt) {
+      const adresseVerdi = svar[s.id] || "";
+      const ferdig = (verdi) => {
+        const nyttSvar = { ...svar, [s.id]: verdi };
+        setSvar(nyttSvar);
+        if (steg < STEG.length - 1) setSteg(steg + 1);
+        else lagOgVis({ areal: nyttSvar.areal||100, byggeår: nyttSvar.byggeår||1978, boligtype: nyttSvar.boligtype||"enebolig", klimasone: nyttSvar.klimasone||"3", oppvarming: nyttSvar.oppvarming||"direkte_el", vinduer_type: nyttSvar.vinduer_type||"dobbel", isolering_nivå:"normal", antall_etasjer:2, adresse: (verdi||"").trim() });
+      };
+      return (
+        <>
+          <div style={S.app}>
+            <Header onBack={()=>steg===0?nullstill():setSteg(steg-1)} onHome={nullstill}/>
+            <div style={S.wrap}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,marginBottom:32}}>
+                {STEG.map((_,i)=>(
+                  <div key={i} style={{height:5,borderRadius:100,transition:"all .45s cubic-bezier(.4,0,.2,1)",background:i<steg?C.green:i===steg?C.navy:"rgba(27,58,92,0.14)",width:i===steg?28:8}}/>
+                ))}
+              </div>
+              <div key={steg} className="be-slide-in">
+                <div style={{textAlign:"center",marginBottom:24}}>
+                  <div style={S.tag}>Spørsmål {steg+1} av {STEG.length}</div>
+                  <h2 style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"clamp(1.4rem,4.5vw,2rem)",color:C.navyDark,marginBottom:10,lineHeight:1.15}}>{s.tittel}</h2>
+                  <p style={S.sub}>{s.hint}</p>
+                </div>
+                <div style={S.card}>
+                  <label style={S.lbl}>Adresse</label>
+                  <input
+                    style={S.inp}
+                    type="text"
+                    placeholder="f.eks. Storgata 1, 0001 Oslo"
+                    value={adresseVerdi}
+                    onChange={e=>setSvar({...svar,[s.id]:e.target.value})}
+                    onKeyDown={e=>e.key==="Enter"&&ferdig(adresseVerdi)}
+                  />
+                </div>
+              </div>
+              <button
+                className="be-btn-p"
+                style={{...S.btnP,marginTop:16}}
+                onClick={()=>ferdig(adresseVerdi)}
+              >
+                {adresseVerdi.trim() ? "Generer rapport →" : "Hopp over og generer rapport →"}
               </button>
             </div>
           </div>
