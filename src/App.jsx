@@ -584,6 +584,8 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
 
               <EpbdStatus dagensMerke={resultat.merke.merke} nyttMerke={nyMerke.merke}/>
 
+              <EnovaBenchmark byggeår={input?.byggeår} dittMerke={resultat.merke.merke}/>
+
               <div style={{fontWeight:700,fontSize:"0.82rem",color:C.navyDark,marginBottom:10}}>Enova-støtte per tiltak</div>
               {valgTiltak.map(t => (
                 <div key={t.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderBottom:`1px solid ${C.section}`}}>
@@ -799,6 +801,92 @@ function EpbdStatus({ dagensMerke, nyttMerke }) {
           lineHeight:1.55,
         }}>
           <strong>Med valgte tiltak (nytt merke {nyttMerke}):</strong> Boligen vil sannsynligvis oppfylle {oppfyller2030EtterTiltak && oppfyller2033EtterTiltak ? "både 2030- og 2033-kravene" : oppfyller2030EtterTiltak ? "2030-kravet, men kan ligge nær 2033-grensen" : "ikke fullt ut 2030-kravet - vurder flere tiltak"}.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// ENOVA-BENCHMARK (sammenligning mot offisielle attester)
+// ─────────────────────────────────────────────
+// Henter aggregert statistikk fra backend (data fra Enovas offentlige
+// energimerke-API, aggregert per byggeår-bøtte). Skjuler seg selv
+// hvis backend ikke har data ennå.
+function EnovaBenchmark({ byggeår, dittMerke }) {
+  const [data, setData] = useState(null);
+  const [feilet, setFeilet] = useState(false);
+
+  useEffect(() => {
+    if (!byggeår) return;
+    let kansellert = false;
+    fetch(`${BACKEND}/api/benchmark?byggeår=${byggeår}`)
+      .then(r => r.json())
+      .then(d => { if (!kansellert) setData(d); })
+      .catch(() => { if (!kansellert) setFeilet(true); });
+    return () => { kansellert = true; };
+  }, [byggeår]);
+
+  if (feilet || !data || !data.tilgjengelig) return null;
+
+  const idx = m => ENERGIMERKER.findIndex(e => e.merke === m);
+  const dittIdx   = idx(dittMerke);
+  const snittIdx  = idx(data.medianMerke);
+  const bedre     = dittIdx < snittIdx;
+  const likt      = dittIdx === snittIdx;
+  const verre     = dittIdx > snittIdx;
+  const snittObj  = ENERGIMERKER[snittIdx] || ENERGIMERKER[6];
+  const dittObj   = ENERGIMERKER[dittIdx]  || ENERGIMERKER[6];
+
+  // Beregn percentile-posisjon (andel boliger med merke lik eller dårligere enn ditt)
+  let andelDårligereEllerLikt = 0;
+  if (data.perMerke && data.totalt) {
+    let sum = 0;
+    for (let i = dittIdx; i < 7; i++) {
+      const m = ["A","B","C","D","E","F","G"][i];
+      sum += data.perMerke[m] || 0;
+    }
+    andelDårligereEllerLikt = Math.round((sum / data.totalt) * 100);
+  }
+
+  return (
+    <div style={{...S.card,marginTop:16,background:`${C.gold}06`,border:`1.5px solid ${C.gold}30`}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+        <div style={S.tag}>Enova-data</div>
+        <span style={{fontSize:"0.62rem",color:C.muted,background:C.section,borderRadius:100,padding:"2px 8px",fontWeight:700}}>{data.totalt.toLocaleString("no")} attester</span>
+      </div>
+      <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:10}}>
+        Hvordan ligger du an mot tilsvarende boliger?
+      </div>
+      <div style={{fontSize:"0.78rem",color:C.muted,lineHeight:1.55,marginBottom:14}}>
+        Sammenlignet med offisielt registrerte energiattester hos Enova for boliger fra <strong>{data.bøtte}</strong>.
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+        <div style={{background:C.white,borderRadius:12,padding:"12px 14px",border:`1px solid ${C.border}`,textAlign:"center"}}>
+          <div style={{fontSize:"0.66rem",color:C.muted,fontWeight:700,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:6}}>Ditt estimat</div>
+          <div style={{width:44,height:44,borderRadius:11,background:dittObj.farge,color:dittObj.tekst,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.5rem",fontWeight:900,fontFamily:"'Fraunces',Georgia,serif",margin:"0 auto"}}>{dittMerke}</div>
+        </div>
+        <div style={{background:C.white,borderRadius:12,padding:"12px 14px",border:`1px solid ${C.border}`,textAlign:"center"}}>
+          <div style={{fontSize:"0.66rem",color:C.muted,fontWeight:700,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:6}}>Typisk (Enova-snitt)</div>
+          <div style={{width:44,height:44,borderRadius:11,background:snittObj.farge,color:snittObj.tekst,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.5rem",fontWeight:900,fontFamily:"'Fraunces',Georgia,serif",margin:"0 auto"}}>{data.medianMerke}</div>
+        </div>
+      </div>
+
+      <div style={{
+        background: bedre ? `${C.green}10` : likt ? `${C.section}` : `${C.gold}10`,
+        border:     bedre ? `1px solid ${C.green}40` : likt ? `1px solid ${C.border}` : `1px solid ${C.gold}40`,
+        borderRadius:12,padding:"12px 14px",
+        fontSize:"0.82rem",color:C.navyDark,lineHeight:1.55,
+      }}>
+        {bedre && <><strong>Bedre enn snittet.</strong> Boligen din ligger over typisk standard for boliger fra {data.bøtte}.</>}
+        {likt  && <><strong>Som forventet.</strong> Boligen din ligger på snittet for boliger fra {data.bøtte}.</>}
+        {verre && <><strong>Under snittet.</strong> {andelDårligereEllerLikt}% av boliger fra {data.bøtte} har merke {dittMerke} eller dårligere - de anbefalte tiltakene løfter deg over snittet.</>}
+      </div>
+
+      {data.oppdatert && (
+        <div style={{fontSize:"0.65rem",color:C.muted,marginTop:10,textAlign:"right"}}>
+          Kilde: Enova - oppdatert {new Date(data.oppdatert).toLocaleDateString("nb-NO")}
         </div>
       )}
     </div>
