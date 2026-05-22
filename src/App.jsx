@@ -582,6 +582,8 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
                 )}
               </div>
 
+              <EpbdStatus dagensMerke={resultat.merke.merke} nyttMerke={nyMerke.merke}/>
+
               <div style={{fontWeight:700,fontSize:"0.82rem",color:C.navyDark,marginBottom:10}}>Enova-støtte per tiltak</div>
               {valgTiltak.map(t => (
                 <div key={t.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderBottom:`1px solid ${C.section}`}}>
@@ -700,6 +702,105 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
         {FREE_MODE && <FeedbackBoks merke={resultat?.merke?.merke}/>}
 
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// EPBD-STATUS (forventede EU-krav 2030/2033)
+// ─────────────────────────────────────────────
+// EPBD 2024/1275 er EU-direktiv. Tallene under er forventede krav -
+// norsk implementering er ikke endelig vedtatt. Vi viser dette som
+// risiko-/mulighet-bilde, IKKE som gjeldende lov.
+function EpbdStatus({ dagensMerke, nyttMerke }) {
+  const idx = m => ENERGIMERKER.findIndex(e => e.merke === m);
+  // Forventede grenser: 2030 minst E, 2033 minst D
+  const grense2030 = idx("E");
+  const grense2033 = idx("D");
+
+  const status = (mIdx, grense) => mIdx <= grense
+    ? { tekst: "Oppfyller", farge: C.green, ikon: "OK" }
+    : { tekst: "Må oppgraderes", farge: C.gold, ikon: "!" };
+
+  const dagensIdx = idx(dagensMerke);
+  const nyttIdx   = idx(nyttMerke);
+  const forbedrer = nyttIdx < dagensIdx;
+
+  const rader = [
+    { år: "2025", lbl: "I dag",                merkeBokstav: dagensMerke, st: { tekst: "Nåværende status", farge: C.muted, ikon: "·" } },
+    { år: "2030", lbl: "Forventet EU-krav",    merkeBokstav: "E",         st: status(dagensIdx, grense2030) },
+    { år: "2033", lbl: "Forventet skjerping",  merkeBokstav: "D",         st: status(dagensIdx, grense2033) },
+  ];
+
+  const oppfyller2030EtterTiltak = nyttIdx <= grense2030;
+  const oppfyller2033EtterTiltak = nyttIdx <= grense2033;
+
+  return (
+    <div style={{...S.card,marginTop:16,background:`linear-gradient(150deg,${C.navy}06 0%,${C.white} 60%)`,border:`1.5px solid ${C.navy}20`}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+        <div style={S.tag}>EU-direktivet</div>
+        <span style={{fontSize:"0.62rem",color:C.muted,background:C.section,borderRadius:100,padding:"2px 8px",fontWeight:700}}>Forventede krav</span>
+      </div>
+      <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:6}}>
+        Hvor står boligen din mot EPBD 2024?
+      </div>
+      <div style={{fontSize:"0.78rem",color:C.muted,lineHeight:1.55,marginBottom:14}}>
+        EUs reviderte bygningsenergidirektiv (EPBD 2024/1275) skisserer skjerpede krav i 2030 og 2033. Norsk implementering er ikke endelig vedtatt - tallene under er forventet retning, ikke gjeldende lov.
+      </div>
+
+      {rader.map((r, i) => (
+        <div key={r.år} style={{
+          display:"grid",
+          gridTemplateColumns:"60px 1fr auto",
+          gap:12,
+          alignItems:"center",
+          padding:"10px 0",
+          borderTop:i===0?"none":`1px solid ${C.section}`,
+        }}>
+          <div>
+            <div style={{fontWeight:800,fontSize:"0.95rem",color:C.navyDark}}>{r.år}</div>
+            <div style={{fontSize:"0.68rem",color:C.muted}}>{r.lbl}</div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{
+              width:30,height:30,borderRadius:8,
+              background:(ENERGIMERKER[idx(r.merkeBokstav)]||{}).farge||C.muted,
+              color:(ENERGIMERKER[idx(r.merkeBokstav)]||{}).tekst||C.white,
+              display:"flex",alignItems:"center",justifyContent:"center",
+              fontSize:"0.95rem",fontWeight:900,fontFamily:"'Fraunces',Georgia,serif",
+              flexShrink:0,
+            }}>{r.merkeBokstav}</div>
+            <div style={{fontSize:"0.76rem",color:C.muted}}>
+              {i===0?"Estimert energimerke":`Minimum merke ${r.merkeBokstav}`}
+            </div>
+          </div>
+          <div style={{
+            background:`${r.st.farge}15`,
+            color:r.st.farge,
+            border:`1px solid ${r.st.farge}40`,
+            borderRadius:100,
+            padding:"4px 11px",
+            fontSize:"0.72rem",
+            fontWeight:800,
+            whiteSpace:"nowrap",
+          }}>{r.st.tekst}</div>
+        </div>
+      ))}
+
+      {forbedrer && (
+        <div style={{
+          marginTop:14,
+          background:`${C.green}10`,
+          border:`1px solid ${C.green}40`,
+          borderRadius:12,
+          padding:"12px 14px",
+          fontSize:"0.82rem",
+          color:C.navyDark,
+          lineHeight:1.55,
+        }}>
+          <strong>Med valgte tiltak (nytt merke {nyttMerke}):</strong> Boligen vil sannsynligvis oppfylle {oppfyller2030EtterTiltak && oppfyller2033EtterTiltak ? "både 2030- og 2033-kravene" : oppfyller2030EtterTiltak ? "2030-kravet, men kan ligge nær 2033-grensen" : "ikke fullt ut 2030-kravet - vurder flere tiltak"}.
+        </div>
+      )}
     </div>
   );
 }
