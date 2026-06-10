@@ -24,11 +24,13 @@ const KLIMASONER = [
   { id: "4", label: "Trøndelag / Vestlandet nord",       HDD: 4500, korreksjon: 1.10 },
   { id: "5", label: "Nord-Norge / Fjellområder",         HDD: 5500, korreksjon: 1.30 },
 ];
+// faktor = andel av klimaskjermen som er eksponert (leiligheter/rekkehus deler
+// vegger/tak/gulv med naboer) – brukes på transmisjonstapet
 const BOLIGTYPER = [
-  { id: "leilighet", label: "Leilighet",               faktor: 0.72, ikon: "🏢" },
-  { id: "rekkehus",  label: "Rekkehus / Tomannsbolig", faktor: 0.88, ikon: "🏘️" },
+  { id: "leilighet", label: "Leilighet",               faktor: 0.55, ikon: "🏢" },
+  { id: "rekkehus",  label: "Rekkehus / Tomannsbolig", faktor: 0.78, ikon: "🏘️" },
   { id: "enebolig",  label: "Enebolig",                faktor: 1.00, ikon: "🏡" },
-  { id: "hytte",     label: "Hytte / Fritidsbolig",    faktor: 1.15, ikon: "🏕️" },
+  { id: "hytte",     label: "Hytte / Fritidsbolig",    faktor: 1.05, ikon: "🏕️" },
 ];
 // Kilde: Enova august 2025 / SSB Q3 2025
 // SPF = Seasonal Performance Factor (reell, ikke lab-COP)
@@ -64,64 +66,148 @@ const OPPVARMING_VALG = [
   { label: "Elektrisk gulvvarme",      verdi: "gulvvarme_el",  ikon: "🔆" },
   { label: "Biokjel / pelletsovn",     verdi: "biokjel",       ikon: "🌿" },
 ];
-// Kilde: Energimerkeforskriften (FOR-2009-12-18-1665) – kWh/m²/år levert energi
+// Farger/etiketter per karakter. NB: karaktergrensene er IKKE faste – de er
+// arealavhengige (se karakterGrenser under). Kilde: Enova/NVE § 10b.
 const ENERGIMERKER = [
-  { merke: "A", maks: 70,   farge: "#00a651", tekst: "#fff", epbd: "nZEB-klar" },
-  { merke: "B", maks: 100,  farge: "#57b946", tekst: "#fff", epbd: "God standard" },
-  { merke: "C", maks: 150,  farge: "#b5d334", tekst: "#333", epbd: "Over middels" },
-  { merke: "D", maks: 200,  farge: "#ffd200", tekst: "#333", epbd: "Middels" },
-  { merke: "E", maks: 250,  farge: "#f7941d", tekst: "#fff", epbd: "Under middels" },
-  { merke: "F", maks: 300,  farge: "#ed1c24", tekst: "#fff", epbd: "Dårlig" },
-  { merke: "G", maks: 9999, farge: "#9e1a20", tekst: "#fff", epbd: "Svært dårlig" },
+  { merke: "A", farge: "#00a651", tekst: "#fff", epbd: "Svært energieffektiv" },
+  { merke: "B", farge: "#57b946", tekst: "#fff", epbd: "TEK17-nivå" },
+  { merke: "C", farge: "#b5d334", tekst: "#333", epbd: "Over middels" },
+  { merke: "D", farge: "#ffd200", tekst: "#333", epbd: "Middels" },
+  { merke: "E", farge: "#f7941d", tekst: "#fff", epbd: "Under middels" },
+  { merke: "F", farge: "#ed1c24", tekst: "#fff", epbd: "Dårlig" },
+  { merke: "G", farge: "#9e1a20", tekst: "#fff", epbd: "Svært dårlig" },
 ];
+
+// Offisiell karakterskala for småhus/leiligheter: grensene avhenger av
+// oppvarmet BRA. Kilde: Enova karakterskala / energimerkeforskriften § 10b.
+function karakterGrenser(BRA) {
+  const a = Math.max(BRA || 100, 30);
+  return [
+    { merke: "A", maks: 95  + 800  / a },
+    { merke: "B", maks: 120 + 1600 / a },
+    { merke: "C", maks: 145 + 2500 / a },
+    { merke: "D", maks: 175 + 4100 / a },
+    { merke: "E", maks: 205 + 5800 / a },
+    { merke: "F", maks: 250 + 8000 / a },
+    { merke: "G", maks: Infinity },
+  ];
+}
+function karakterFor(kwhPerM2, BRA) {
+  const g = karakterGrenser(BRA).find(x => kwhPerM2 <= x.maks);
+  return ENERGIMERKER.find(e => e.merke === (g ? g.merke : "G")) || ENERGIMERKER[6];
+}
 // Kilde: Enova august 2025 – satser gjelder helårsboliger med byggesøknad FØR 1997 (vinduer/isolering)
 // Maks totalt 100 000 kr per bolig i perioden 2025–2028. Søk FØR oppstart.
 // MERK: Luft/luft-varmepumpe har INGEN Enova-støtte fra august 2025.
 const TILTAK = [
-  { id: "isolering_loft",   navn: "Etterisolering loft/tak",             ikon: "🏠", støtte_min: 5000,  støtte_max: 22500, kostnad_min: 30000,  kostnad_max: 100000, kWh_pct: 0.15, krever_ikke: [],                              passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til energitiltak i bolig (aug 2025)",  beskrivelse: "25 % av kostnad, maks 150 kr/kvm opp til 150 kvm. Varme stiger – loft er ofte det mest kostnadseffektive tiltaket. Kun boliger bygget før 1997.", prioritet_terskel: 25, kategori: "enova_kvalifisert" },
-  { id: "varmepumpe_lv",    navn: "Luft/vann-varmepumpe",                ikon: "💧", støtte_min: 5000,  støtte_max: 20000, kostnad_min: 60000,  kostnad_max: 120000, kWh_pct: 0.35, krever_ikke: ["varmepumpe_ll","varmepumpe_lv"], passer_for: ["enebolig","rekkehus"],          enova_program: "Tilskudd til luft-til-vann varmepumpe (aug 2025)", beskrivelse: "SPF 2,8 – dekker 70 % av varmebehovet. 25 % av kostnad, maks 20 000 kr. Krever vannbåren distribusjon.", prioritet_terskel: 18, kategori: "enova_kvalifisert" },
-  { id: "ventilasjon",      navn: "Balansert ventilasjon m/gjenvinning", ikon: "💨", støtte_min: 5000,  støtte_max: 15000, kostnad_min: 60000,  kostnad_max: 100000, kWh_pct: 0.13, krever_ikke: [],                              passer_for: ["alle"],                        enova_program: "Tilskudd til energitiltak i bolig (aug 2025)",  beskrivelse: "25 % av kostnad, maks 15 000 kr. Gjenvinning av varme fra avtrekksluft + bedre luftkvalitet.", prioritet_terskel: 20, kategori: "enova_kvalifisert" },
-  { id: "vinduer",          navn: "Vindusutskifting (3-lags)",           ikon: "🪟", støtte_min: 2000,  støtte_max: 20000, kostnad_min: 60000,  kostnad_max: 100000, kWh_pct: 0.10, krever_ikke: [],                              passer_for: ["alle"],                        enova_program: "Tilskudd til energitiltak i bolig (aug 2025)",  beskrivelse: "25 % av kostnad, maks 400 kr/kvm opp til 50 kvm (maks 20 000 kr). U-verdi ned til 0,7 W/m²K. Kun boliger bygget før 1997.", prioritet_terskel: 22, kategori: "enova_kvalifisert" },
-  { id: "ytterdører",       navn: "Utskifting ytterdører",               ikon: "🚪", støtte_min: 2000,  støtte_max: 8000,  kostnad_min: 15000,  kostnad_max: 35000,  kWh_pct: 0.03, krever_ikke: [],                              passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til energitiltak i bolig (aug 2025)",  beskrivelse: "Energieffektive ytterdører med U-verdi ≤ 1,2 W/m²K. 25 % av kostnad, maks 400 kr/kvm. Kun boliger bygget før 1997. Lav effekt isolert, men reduserer luftlekkasjer og hever totalkomforten.", prioritet_terskel: 28, kategori: "enova_kvalifisert" },
-  { id: "isolering_vegger", navn: "Etterisolering yttervegger",          ikon: "🧱", støtte_min: 5000,  støtte_max: 37500, kostnad_min: 80000,  kostnad_max: 150000, kWh_pct: 0.15, krever_ikke: [],                              passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til energitiltak i bolig (aug 2025)",  beskrivelse: "25 % av kostnad, maks 150 kr/kvm opp til 250 kvm (maks 37 500 kr). Best ved fasaderehab. Kun boliger bygget før 1997.", prioritet_terskel: 30, kategori: "enova_kvalifisert" },
-  { id: "solceller",        navn: "Solcelleanlegg",                      ikon: "☀️", støtte_min: 10000, støtte_max: 37500, kostnad_min: 70000,  kostnad_max: 100000, kWh_pct: 0.20, krever_ikke: [],                              passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til solcelleanlegg (aug 2025) – 2 500 kr/kW, maks 15 kW", beskrivelse: "2 500 kr/kW installert effekt, maks 15 kW (maks 37 500 kr). 850 kWh/kWp/år. Best med sørvendt tak.", prioritet_terskel: 25, min_areal: 100, kategori: "enova_kvalifisert" },
-  { id: "bergvarme",        navn: "Bergvarme (væske-til-vann)",          ikon: "⛏️", støtte_min: 10000, støtte_max: 40000, kostnad_min: 100000, kostnad_max: 200000, kWh_pct: 0.45, krever_ikke: ["varmepumpe_ll","varmepumpe_lv"], passer_for: ["enebolig","rekkehus"],          enova_program: "Tilskudd til væske-til-vann varmepumpe (aug 2025)", beskrivelse: "SPF 3,5 – dekker 95 % av varmebehovet. 25 % av kostnad, maks 40 000 kr. Best langsiktig investering.", prioritet_terskel: 30, kategori: "enova_kvalifisert" },
-  { id: "varmepumpe_ll",    navn: "Luft/luft-varmepumpe",                ikon: "🌡️", støtte_min: 0,     støtte_max: 0,     kostnad_min: 15000,  kostnad_max: 25000,  kWh_pct: 0.20, krever_ikke: ["varmepumpe_ll","varmepumpe_lv"], passer_for: ["alle"],                        enova_program: "Ingen Enova-støtte (avviklet aug 2025)",               beskrivelse: "SPF 2,5, dekker 60 % av varmebehovet. Ingen Enova-støtte fra august 2025. Rask tilbakebetaling pga lav kostnad.", prioritet_terskel: 8, kategori: "egenfinansiert", enova_status_tekst: "Ikke Enova-støttet etter august 2025" },
-  { id: "smart_styring",    navn: "Smart styring og soneregulering",     ikon: "📱", støtte_min: 0,     støtte_max: 0,     kostnad_min: 3000,   kostnad_max: 15000,  kWh_pct: 0.06, krever_ikke: [],                              passer_for: ["alle"],                        enova_program: "Ingen Enova-støtte",                                   beskrivelse: "Programmerbare termostater, soneregulering og natt-/dagsenking. Reduserer oppvarmingsbehovet uten å redusere komfort. Lav investering med rask tilbakebetaling.", prioritet_terskel: 10, kategori: "egenfinansiert", enova_status_tekst: "Ingen Enova-støtte" },
-  { id: "tetting",          navn: "Tettelister og fuging",               ikon: "🔧", støtte_min: 0,     støtte_max: 0,     kostnad_min: 2000,   kostnad_max: 8000,   kWh_pct: 0.05, krever_ikke: [],                              passer_for: ["alle"],                        enova_program: "Ingen Enova-støtte (grunntiltak)",                      beskrivelse: "Tette rundt vinduer, dører og gjennomføringer med tettelister, bunnsverd og fugemasse. Billigste tiltak med raskest tilbakebetaling. Anbefales alltid som første steg.", prioritet_terskel: 7, kategori: "egenfinansiert", enova_status_tekst: "Grunntiltak uten Enova-støtte" },
+  { id: "isolering_loft",   navn: "Etterisolering loft/tak",             ikon: "🏠", støtte_min: 5000,  støtte_max: 22500, kostnad_min: 30000,  kostnad_max: 100000, kWh_pct: 0.18, krever_ikke: [],                              passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til energitiltak i bolig",  beskrivelse: "25 % av kostnad, maks 150 kr/kvm opp til 150 kvm. Varme stiger – loft er ofte det mest kostnadseffektive tiltaket. Kun boliger med byggesøknad før 1. juli 1997.", prioritet_terskel: 25, kategori: "enova_kvalifisert" },
+  { id: "varmepumpe_lv",    navn: "Luft/vann-varmepumpe",                ikon: "💧", støtte_min: 5000,  støtte_max: 20000, kostnad_min: 60000,  kostnad_max: 120000, kWh_pct: 0.45, krever_ikke: ["varmepumpe_ll","varmepumpe_lv"], passer_for: ["enebolig","rekkehus"],          enova_program: "Tilskudd til luft-til-vann varmepumpe", beskrivelse: "SPF 2,8 – dekker 70 % av varmebehovet. 25 % av kostnad, maks 20 000 kr. Krever vannbåren distribusjon.", prioritet_terskel: 18, kategori: "enova_kvalifisert" },
+  { id: "ventilasjon",      navn: "Balansert ventilasjon m/gjenvinning", ikon: "💨", støtte_min: 5000,  støtte_max: 15000, kostnad_min: 60000,  kostnad_max: 100000, kWh_pct: 0.20, krever_ikke: [],                              passer_for: ["alle"],                        enova_program: "Tilskudd til energitiltak i bolig",  beskrivelse: "25 % av kostnad, maks 15 000 kr. Gjenvinning av varme fra avtrekksluft + bedre luftkvalitet.", prioritet_terskel: 20, kategori: "enova_kvalifisert" },
+  { id: "vinduer",          navn: "Vindusutskifting (3-lags)",           ikon: "🪟", støtte_min: 2000,  støtte_max: 20000, kostnad_min: 60000,  kostnad_max: 100000, kWh_pct: 0.15, krever_ikke: [],                              passer_for: ["alle"],                        enova_program: "Tilskudd til energitiltak i bolig",  beskrivelse: "25 % av kostnad, maks 400 kr/kvm opp til 50 kvm (maks 20 000 kr). U-verdi ned til 0,7 W/m²K. Kun boliger med byggesøknad før 1. juli 1997.", prioritet_terskel: 22, kategori: "enova_kvalifisert" },
+  { id: "ytterdører",       navn: "Utskifting ytterdører",               ikon: "🚪", støtte_min: 2000,  støtte_max: 8000,  kostnad_min: 15000,  kostnad_max: 35000,  kWh_pct: 0.03, krever_ikke: [],                              passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til energitiltak i bolig",  beskrivelse: "Energieffektive ytterdører med U-verdi ≤ 1,2 W/m²K. 25 % av kostnad, maks 400 kr/kvm. Kun boliger med byggesøknad før 1. juli 1997. Lav effekt isolert, men reduserer luftlekkasjer og hever totalkomforten.", prioritet_terskel: 28, kategori: "enova_kvalifisert" },
+  { id: "isolering_vegger", navn: "Etterisolering yttervegger",          ikon: "🧱", støtte_min: 5000,  støtte_max: 37500, kostnad_min: 80000,  kostnad_max: 150000, kWh_pct: 0.22, krever_ikke: [],                              passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til energitiltak i bolig",  beskrivelse: "25 % av kostnad, maks 150 kr/kvm opp til 250 kvm (maks 37 500 kr). Best ved fasaderehab. Kun boliger med byggesøknad før 1. juli 1997.", prioritet_terskel: 30, kategori: "enova_kvalifisert" },
+  { id: "solceller",        navn: "Solcelleanlegg",                      ikon: "☀️", støtte_min: 10000, støtte_max: 37500, kostnad_min: 70000,  kostnad_max: 100000, kWh_pct: 0.0, krever_ikke: [],                              passer_for: ["enebolig","rekkehus","hytte"], enova_program: "Tilskudd til solcelleanlegg – 2 500 kr/kW, maks 15 kW", beskrivelse: "2 500 kr/kW installert effekt, maks 15 kW (maks 37 500 kr). Typisk produksjon 850 kWh/kWp/år. NB: solceller reduserer strømregningen, men påvirker i liten grad energimerket.", prioritet_terskel: 25, min_areal: 100, kategori: "enova_kvalifisert" },
+  { id: "bergvarme",        navn: "Bergvarme (væske-til-vann)",          ikon: "⛏️", støtte_min: 10000, støtte_max: 40000, kostnad_min: 100000, kostnad_max: 200000, kWh_pct: 0.60, krever_ikke: ["varmepumpe_ll","varmepumpe_lv"], passer_for: ["enebolig","rekkehus"],          enova_program: "Tilskudd til væske-til-vann varmepumpe", beskrivelse: "SPF 3,5 – dekker 95 % av varmebehovet. 25 % av kostnad, maks 40 000 kr. Best langsiktig investering.", prioritet_terskel: 30, kategori: "enova_kvalifisert" },
+  { id: "varmepumpe_ll",    navn: "Luft/luft-varmepumpe",                ikon: "🌡️", støtte_min: 0,     støtte_max: 0,     kostnad_min: 15000,  kostnad_max: 25000,  kWh_pct: 0.36, krever_ikke: ["varmepumpe_ll","varmepumpe_lv"], passer_for: ["alle"],                        enova_program: "Ingen Enova-støtte",               beskrivelse: "SPF 2,5, dekker 60 % av varmebehovet. Ingen Enova-støtte fra august 2025. Rask tilbakebetaling pga lav kostnad.", prioritet_terskel: 8, kategori: "egenfinansiert", enova_status_tekst: "Ikke Enova-støttet etter august 2025" },
+  { id: "smart_styring",    navn: "Smart styring og soneregulering",     ikon: "📱", støtte_min: 0,     støtte_max: 0,     kostnad_min: 3000,   kostnad_max: 15000,  kWh_pct: 0.10, krever_ikke: [],                              passer_for: ["alle"],                        enova_program: "Ingen Enova-støtte",                                   beskrivelse: "Programmerbare termostater, soneregulering og natt-/dagsenking. Reduserer oppvarmingsbehovet uten å redusere komfort. Lav investering med rask tilbakebetaling.", prioritet_terskel: 10, kategori: "egenfinansiert", enova_status_tekst: "Ingen Enova-støtte" },
+  { id: "tetting",          navn: "Tettelister og fuging",               ikon: "🔧", støtte_min: 0,     støtte_max: 0,     kostnad_min: 2000,   kostnad_max: 8000,   kWh_pct: 0.07, krever_ikke: [],                              passer_for: ["alle"],                        enova_program: "Ingen Enova-støtte (grunntiltak)",                      beskrivelse: "Tette rundt vinduer, dører og gjennomføringer med tettelister, bunnsverd og fugemasse. Billigste tiltak med raskest tilbakebetaling. Anbefales alltid som første steg.", prioritet_terskel: 7, kategori: "egenfinansiert", enova_status_tekst: "Grunntiltak uten Enova-støtte" },
 ];
 
 // ─────────────────────────────────────────────
 // BEREGNING
 // ─────────────────────────────────────────────
+// ── Beregningskonstanter (forenklet NS 3031-metodikk) ──
+const HDD_NORM    = 4100; // normert klima (Oslo) – karakteren beregnes alltid med dette
+const FAST_EL     = 29;   // lys + utstyr, kWh/m²/år (NS 3031 normtall)
+const TAPPEVANN   = 30;   // varmt tappevann netto, kWh/m²/år (NS 3031: 29,8)
+const GRATISVARME = 25;   // utnyttet sol- og internvarme, kWh/m²/år
+
+function kuldebro(byggeår) { return byggeår < 1998 ? 0.10 : byggeår < 2008 ? 0.08 : byggeår < 2018 ? 0.06 : 0.05; }
+
+// Systemfaktor: levert energi per kWh netto varmebehov (dekningsgrad/SPF innbakt)
+const SYSTEMFAKTOR = {
+  direkte_el:    { romoppv: 1.00, tappevann: 1.00 },
+  varmepumpe_ll: { romoppv: 0.64, tappevann: 1.00 }, // 60 % dekning, SPF 2,5
+  varmepumpe_lv: { romoppv: 0.55, tappevann: 0.55 }, // 70 % dekning, SPF 2,8 – dekker også tappevann
+  fjernvarme:    { romoppv: 1.00, tappevann: 1.00 },
+  ved_pellets:   { romoppv: 1.33, tappevann: 1.00 }, // virkningsgrad 75 %
+  olje_gass:     { romoppv: 1.18, tappevann: 1.00 }, // virkningsgrad 85 %
+  gulvvarme_el:  { romoppv: 1.00, tappevann: 1.00 },
+  biokjel:       { romoppv: 1.18, tappevann: 1.00 },
+};
+
 function beregnEnergi(input) {
   const { areal, byggeår, oppvarming, boligtype, klimasone, isolering_nivå, vinduer_type, antall_etasjer } = input;
   const bygData = BYGGEÅR_DATA.find(b => byggeår >= b.fra && byggeår <= b.til) || BYGGEÅR_DATA[0];
   const klima   = KLIMASONER.find(k => k.id === klimasone) || KLIMASONER[2];
   const bolig   = BOLIGTYPER.find(b => b.id === boligtype) || BOLIGTYPER[2];
-  let oppvData, weightedCost;
+
+  // ── Oppvarmingssystem: systemfaktor = levert energi per kWh netto behov ──
+  let oppvData, weightedCost, fRom, fVann;
   if (Array.isArray(oppvarming)) {
-    const wCOP    = oppvarming.reduce((s, k) => s + (OPPVARMING_DATA[k.kilde]?.COP    || 1.0) * k.andel, 0);
-    const wPrimær = oppvarming.reduce((s, k) => s + (OPPVARMING_DATA[k.kilde]?.primær || 2.0) * k.andel, 0);
+    fRom   = oppvarming.reduce((sum, k) => sum + (SYSTEMFAKTOR[k.kilde]?.romoppv   ?? 1.0) * k.andel, 0);
+    fVann  = oppvarming.reduce((sum, k) => sum + (SYSTEMFAKTOR[k.kilde]?.tappevann ?? 1.0) * k.andel, 0);
+    const wCOP    = oppvarming.reduce((sum, k) => sum + (OPPVARMING_DATA[k.kilde]?.COP    || 1.0) * k.andel, 0);
+    const wPrimær = oppvarming.reduce((sum, k) => sum + (OPPVARMING_DATA[k.kilde]?.primær || 2.0) * k.andel, 0);
     oppvData     = { label: oppvarming.map(k => OPPVARMING_DATA[k.kilde]?.label || k.kilde).join(" + "), COP: wCOP, primær: wPrimær, ikon: OPPVARMING_DATA[oppvarming[0].kilde]?.ikon || "🏠" };
-    weightedCost = oppvarming.reduce((s, k) => s + (ENERGIKOST[k.kilde] || 1.40) * k.andel, 0);
+    weightedCost = oppvarming.reduce((sum, k) => sum + (ENERGIKOST[k.kilde] || 1.40) * k.andel, 0);
   } else {
+    const sf     = SYSTEMFAKTOR[oppvarming] || SYSTEMFAKTOR.direkte_el;
+    fRom = sf.romoppv; fVann = sf.tappevann;
     oppvData     = OPPVARMING_DATA[oppvarming] || OPPVARMING_DATA.direkte_el;
-    weightedCost = ENERGIKOST[oppvarming] || 1.40; // Kilde: SSB Q3 2025 – 1,40 kr/kWh strøm
+    weightedCost = ENERGIKOST[oppvarming] || 1.40; // Kilde: SSB – kr/kWh inkl. nettleie og avgifter
   }
+
+  // ── U-verdier justert for oppgitt standard ──
   let u_vegg = bygData.u_vegg, u_tak = bygData.u_tak, lufttetthet = bygData.lufttetthet;
   let u_vindu = vinduer_type === "trippel" ? 0.9 : vinduer_type === "dobbel" ? 1.8 : bygData.u_vindu;
   if (isolering_nivå === "oppgradert") { u_vegg *= 0.75; u_tak *= 0.75; lufttetthet *= 0.75; }
   if (isolering_nivå === "dårlig")     { u_vegg *= 1.20; u_tak *= 1.15; lufttetthet *= 1.20; }
-  const A_vegg = Math.sqrt(areal) * antall_etasjer * 3.0 * 4;
-  const HT = (u_vegg * A_vegg + u_tak * areal/antall_etasjer + bygData.u_gulv * areal/antall_etasjer + u_vindu * areal * 0.18) * 0.001;
-  const Hv = lufttetthet * areal * antall_etasjer * 2.7 * 0.33 * 0.001;
-  const Q_levert = Math.round((HT + Hv) * klima.HDD * 24 / areal / oppvData.COP * bolig.faktor * klima.korreksjon + 20);
+
+  // ── Geometri: fotavtrykk = areal per etasje (før: hele arealet per etasje → 41 % for mye vegg) ──
+  const etg        = Math.max(1, Number(antall_etasjer) || 1);
+  const fotavtrykk = areal / etg;
+  const side       = Math.sqrt(fotavtrykk);
+  const A_vindu    = 0.20 * areal;                                   // NS 3031-sjablong: 20 % av BRA
+  const A_vegg     = Math.max(4 * side * 2.7 * etg - A_vindu, 0);
+
+  // ── Transmisjonstap (W/K) inkl. kuldebroer; boligfaktor for delte flater ──
+  const HT = (u_vegg * A_vegg + u_tak * fotavtrykk + bygData.u_gulv * fotavtrykk
+            + u_vindu * A_vindu + kuldebro(byggeår) * areal) * bolig.faktor;
+
+  // ── Ventilasjon + infiltrasjon (W/K) ──
+  // Infiltrasjon = n50 × 0,07 (NS-EN 12831-forenkling) – n50 er IKKE reell luftveksling.
+  // Boliger fra 2008+ antas å ha balansert ventilasjon med 65 % varmegjenvinning.
+  const balansert = byggeår >= 2008;
+  const ach = (balansert ? 0.5 * 0.35 : 0.5) + lufttetthet * 0.07;
+  const Hv  = ach * areal * 2.4 * 0.33;
+  const H   = HT + Hv;
+
+  // ── Netto romoppvarming per m² ──
+  const nettoOppv = HDD => {
+    const tap = H * HDD * 24 / 1000 / areal;
+    return Math.max(tap - Math.min(GRATISVARME, 0.6 * tap), 10);
+  };
+  const vifter = balansert ? 6 : 0;
+
+  // KARAKTER: normert Oslo-klima – slik det offisielle energimerket beregnes.
+  // Klimasonen skal IKKE påvirke karakteren, kun kostnadsestimatet.
+  const oppvLevert  = nettoOppv(HDD_NORM) * fRom;
+  const fastLevert  = TAPPEVANN * fVann + FAST_EL + vifter;
+  const Q_levert    = Math.round(oppvLevert + fastLevert);
+
+  // FORBRUK/KOSTNAD: lokalt klima
+  const oppvLevertLokal = nettoOppv(klima.HDD) * fRom;
+  const totalKwh        = Math.round((oppvLevertLokal + fastLevert) * areal);
+  const oppvarmingKwh   = Math.round(oppvLevertLokal * areal);
+
   const Q_primær = Math.round(Q_levert * oppvData.primær);
-  const merkeObj = ENERGIMERKER.find(e => Q_levert <= e.maks) || ENERGIMERKER[6];
-  const merkePot = ENERGIMERKER.find(e => Math.round(Q_levert * 0.55) <= e.maks) || ENERGIMERKER[6];
-  const totalKwh = Math.round(Q_levert * areal);
-  return { kwhPerM2: Q_levert, primærPerM2: Q_primær, totalKwh, areal,
+  const merkeObj = karakterFor(Q_levert, areal);
+  // Potensial: alle anbefalte tiltak ≈ 55 % reduksjon av oppvarmingsdelen
+  const merkePot = karakterFor(Math.round(oppvLevert * 0.45 + fastLevert), areal);
+
+  return { kwhPerM2: Q_levert, primærPerM2: Q_primær, totalKwh, oppvarmingKwh, areal,
+           oppvLevertPerM2: Math.round(oppvLevert), fastLevertPerM2: Math.round(fastLevert),
            merke: merkeObj, merkePotensial: merkePot, bygData, klima, bolig, oppvData,
            u_vegg, u_tak, u_vindu, lufttetthet, weightedCost,
            strømkostnad: Math.round(totalKwh * weightedCost) };
@@ -142,15 +228,33 @@ function beregnTiltak(resultat, input) {
     if (t.id === "isolering_vegger" && resultat.kwhPerM2 < 100) return false;
     return true;
   }).map(t => {
-    const besparelse_kr = Math.round(resultat.totalKwh * t.kWh_pct * resultat.weightedCost);
-    const støtte_snitt  = Math.round((t.støtte_min + t.støtte_max) / 2);
+    // ── Enova-regler (verifisert mot enova.no juni 2026) ──
+    // 1. Fritidsboliger får IKKE Enova-støtte – kun helårsbolig med folkeregistrert adresse.
+    // 2. Bygningskropp-tiltak (isolering/vinduer/dører) krever byggesøknad før 1. juli 1997.
+    const byggeårNum = Number(input.byggeår) || 1978;
+    const KREVER_FØR_1997 = ["isolering_loft", "isolering_vegger", "vinduer", "ytterdører"];
+    let støtte_min = t.støtte_min, støtte_max = t.støtte_max, enovaMerknad = null;
+    if (input.boligtype === "hytte" && støtte_max > 0) {
+      støtte_min = 0; støtte_max = 0;
+      enovaMerknad = "Enova støtter ikke fritidsboliger – kun helårsbolig";
+    } else if (byggeårNum >= 1997 && KREVER_FØR_1997.includes(t.id) && støtte_max > 0) {
+      støtte_min = 0; støtte_max = 0;
+      enovaMerknad = "Enova-støtte gjelder kun boliger med byggesøknad før 1. juli 1997";
+    }
+    // ── Besparelse ──
+    // kWh_pct er andel av OPPVARMINGSBEHOVET (ikke totalforbruket) tiltaket sparer.
+    // Solceller: fast produksjon (850 kWh/kWp, typisk 7 kW anlegg), verdsatt til
+    // ~0,90 kr/kWh (blanding av egetbruk og plusskundesalg).
+    const besparelse_kr = t.id === "solceller"
+      ? Math.round(7 * 850 * 0.90)
+      : Math.round((resultat.oppvarmingKwh || 0) * t.kWh_pct * resultat.weightedCost);
+    const støtte_snitt  = Math.round((støtte_min + støtte_max) / 2);
     const kostnad_snitt = Math.round((t.kostnad_min + t.kostnad_max) / 2);
     const netto         = kostnad_snitt - støtte_snitt;
     const tilbake       = besparelse_kr > 0 ? Math.round(netto / besparelse_kr) : 99;
-    // Energy-grade-adjusted threshold: E/F/G homes get more "høy" classifications
     const effTerskel    = Math.round(t.prioritet_terskel * gradeFaktor);
     const prioritet     = tilbake <= effTerskel ? "høy" : tilbake <= effTerskel * 1.8 ? "middels" : "lav";
-    return { ...t, besparelse_kr, støtte_snitt, kostnad_snitt, netto, tilbakebetaling: tilbake, prioritet };
+    return { ...t, støtte_min, støtte_max, enovaMerknad, besparelse_kr, støtte_snitt, kostnad_snitt, netto, tilbakebetaling: tilbake, prioritet };
   }).sort((a, b) => a.tilbakebetaling - b.tilbakebetaling);
 
   // Marker topp 3 som "anbefalt": balanserer kWh-besparelse (karakter + strøm)
@@ -216,8 +320,9 @@ const S = {
   btnP:   { width:"100%", padding:"16px", background:`linear-gradient(135deg,${C.navy},${C.navyMid})`, color:C.white, border:"none", borderRadius:14, fontSize:"1rem", fontWeight:700, cursor:"pointer", boxShadow:"0 4px 20px rgba(27,58,92,0.28)", marginTop:8, letterSpacing:"-0.01em" },
   btnG:   { background:"transparent", border:`1.5px solid ${C.border}`, borderRadius:10, padding:"9px 18px", fontSize:"0.84rem", fontWeight:600, color:C.navy, cursor:"pointer" },
   lbl:    { display:"block", fontSize:"0.78rem", fontWeight:700, color:C.navy, marginBottom:6, letterSpacing:"0.01em" },
-  inp:    { width:"100%", padding:"12px 14px", borderRadius:11, border:`1.5px solid rgba(27,58,92,0.14)`, fontSize:"0.94rem", color:C.navyDark, background:"#FAFAF8", outline:"none", boxSizing:"border-box" },
-  sel:    { width:"100%", padding:"12px 14px", borderRadius:11, border:`1.5px solid rgba(27,58,92,0.14)`, fontSize:"0.94rem", color:C.navyDark, background:"#FAFAF8", outline:"none", boxSizing:"border-box" },
+  // NB: fontSize må være ≥ 1rem (16px) – ellers auto-zoomer iOS Safari inn på feltet ved fokus (kjent mobil-bug)
+  inp:    { width:"100%", padding:"12px 14px", borderRadius:11, border:`1.5px solid rgba(27,58,92,0.14)`, fontSize:"1rem", color:C.navyDark, background:"#FAFAF8", outline:"none", boxSizing:"border-box" },
+  sel:    { width:"100%", padding:"12px 14px", borderRadius:11, border:`1.5px solid rgba(27,58,92,0.14)`, fontSize:"1rem", color:C.navyDark, background:"#FAFAF8", outline:"none", boxSizing:"border-box" },
 };
 
 function Header({ onBack, onHome }) {
@@ -293,7 +398,9 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
       if (data.url) window.location.href = data.url;
       else { setFeil("Noe gikk galt – prøv igjen."); setLaster(false); }
     } catch(_) {
-      onBetalt(epost);
+      // VIKTIG: Tidligere låste denne opp rapporten gratis ved nettverksfeil (onBetalt).
+      // Nå vises feilmelding i stedet – betaling skal aldri kunne omgås ved feil.
+      setFeil("Kunne ikke kontakte betalingstjenesten. Sjekk nettforbindelsen og prøv igjen.");
       setLaster(false);
     }
   }
@@ -313,6 +420,9 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
             </div>
           </div>
           <Skala merke={merke}/>
+          <div style={{fontSize:"0.7rem",color:C.muted,marginTop:12,lineHeight:1.5}}>
+            Estimat med normert Oslo-klima og Enovas arealavhengige karakterskala – ikke offisiell energiattest.
+          </div>
         </div>
 
         {/* Uskarp forhåndsvisning av tiltak */}
@@ -360,7 +470,7 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
             {feil && <div style={{color:"#DC2626",fontSize:"0.8rem",marginTop:6,display:"flex",alignItems:"center",gap:4}}><span>⚠</span>{feil}</div>}
           </div>
           <div style={{background:C.section,borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:"0.78rem",color:C.muted,lineHeight:1.55,textAlign:"center"}}>
-            En offisiell energirådgiver koster <strong style={{color:C.navyDark}}>9 000–20 000 kr</strong>. Få et detaljert energiestimatt med tiltaksplan for <strong style={{color:C.navyDark}}>399 kr</strong>.
+            En offisiell energirådgiver koster <strong style={{color:C.navyDark}}>9 000–20 000 kr</strong>. Få et detaljert energiestimat med tiltaksplan for <strong style={{color:C.navyDark}}>399 kr</strong>.
           </div>
           <div style={{display:"flex",justifyContent:"center",gap:16,marginBottom:12}}>
             {[{i:"💳",t:"Kortbetaling"},{i:"🔒",t:"Stripe"},{i:"📄",t:"PDF på e-post"}].map(x=>(
@@ -400,9 +510,13 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
   const netto       = totInv - totStøtte;
   const totBes      = valgTiltak.reduce((s, t) => s + t.besparelse_kr, 0);
   const breakEven   = totBes > 0 ? Math.round(netto / totBes) : "–";
-  const kwhPctTotal = Math.min(valgTiltak.reduce((s, t) => s + t.kWh_pct, 0), 0.85);
-  const nyKwhPerM2  = Math.round(resultat.kwhPerM2 * (1 - kwhPctTotal));
-  const nyMerke     = ENERGIMERKER.find(e => nyKwhPerM2 <= e.maks) || ENERGIMERKER[6];
+  // Tiltak overlapper: 15 % + 20 % sparer ikke 35 %, men 1−(0,85×0,80) = 32 %.
+  // Effekten gjelder bare OPPVARMINGSdelen – tappevann/lys/utstyr påvirkes ikke.
+  const kwhPctTotal = 1 - valgTiltak.reduce((p, t) => p * (1 - (t.kWh_pct || 0)), 1);
+  const fastDel     = resultat.fastLevertPerM2 ?? 59;
+  const oppvDel     = resultat.oppvLevertPerM2 ?? Math.max(resultat.kwhPerM2 - fastDel, 10);
+  const nyKwhPerM2  = Math.round(fastDel + oppvDel * (1 - kwhPctTotal));
+  const nyMerke     = karakterFor(nyKwhPerM2, resultat.areal);
 
   function toggleTiltak(id) {
     setValgte(prev => {
@@ -440,6 +554,7 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
   }
 
   const stegLabels = ["Tiltaksvalg", "Sammenligning", "Rapport sendt"];
+  const skjermSteg2Forbehold = steg === 2 ? <Forbehold resultat={resultat}/> : null;
 
   return (
     <div style={S.app}>
@@ -454,7 +569,7 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
 
         {/* Steg-indikator */}
         {steg < 3 && (
-          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:24,justifyContent:"center"}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:24,justifyContent:"center",flexWrap:"wrap"}}>
             {stegLabels.map((lbl, i) => (
               <React.Fragment key={lbl}>
                 <div style={{display:"flex",alignItems:"center",gap:5}}>
@@ -504,6 +619,7 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:6}}>
                         <div style={{fontWeight:700,fontSize:"0.9rem",color:C.navyDark}}>{t.ikon} {t.navn}</div>
                         {t.anbefalt          && <span style={{background:C.green,color:C.white,borderRadius:100,padding:"2px 9px",fontSize:"0.65rem",fontWeight:800,whiteSpace:"nowrap",flexShrink:0}}>Anbefalt</span>}
+                        {t.enovaMerknad && <span style={{background:"#fef3e2",color:"#b45309",borderRadius:100,padding:"2px 9px",fontSize:"0.63rem",fontWeight:700,flexShrink:0}}>Uten Enova-støtte</span>}
                         {!t.anbefalt && t.prioritet==="høy"    && <span style={{background:C.gold,color:C.white,borderRadius:100,padding:"2px 9px",fontSize:"0.65rem",fontWeight:800,whiteSpace:"nowrap",flexShrink:0}}>God ROI</span>}
                       </div>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
@@ -701,6 +817,8 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
           </>
         )}
 
+        {skjermSteg2Forbehold}
+
         {FREE_MODE && <FeedbackBoks merke={resultat?.merke?.merke}/>}
 
       </div>
@@ -709,98 +827,69 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
 }
 
 // ─────────────────────────────────────────────
-// EPBD-STATUS (forventede EU-krav 2030/2033)
+// EPBD-STATUS (endelig vedtatt EPBD 2024/1275 – bestandsmål for boliger)
 // ─────────────────────────────────────────────
 // EPBD 2024/1275 er EU-direktiv. Tallene under er forventede krav -
 // norsk implementering er ikke endelig vedtatt. Vi viser dette som
 // risiko-/mulighet-bilde, IKKE som gjeldende lov.
 function EpbdStatus({ dagensMerke, nyttMerke }) {
   const idx = m => ENERGIMERKER.findIndex(e => e.merke === m);
-  // Forventede grenser: 2030 minst E, 2033 minst D
-  const grense2030 = idx("E");
-  const grense2033 = idx("D");
-
-  const status = (mIdx, grense) => mIdx <= grense
-    ? { tekst: "Oppfyller", farge: C.green, ikon: "OK" }
-    : { tekst: "Må oppgraderes", farge: C.gold, ikon: "!" };
-
   const dagensIdx = idx(dagensMerke);
   const nyttIdx   = idx(nyttMerke);
   const forbedrer = nyttIdx < dagensIdx;
 
-  const rader = [
-    { år: "2025", lbl: "I dag",                merkeBokstav: dagensMerke, st: { tekst: "Nåværende status", farge: C.muted, ikon: "·" } },
-    { år: "2030", lbl: "Forventet EU-krav",    merkeBokstav: "E",         st: status(dagensIdx, grense2030) },
-    { år: "2033", lbl: "Forventet skjerping",  merkeBokstav: "D",         st: status(dagensIdx, grense2033) },
-  ];
+  // Endelig vedtatt EPBD (2024/1275) for BOLIGER: nasjonale bestandsmål, ikke
+  // individuelle merkekrav. Snittforbruket i boligmassen skal ned 16 % innen
+  // 2030 og 20–22 % innen 2035, og minst 55 % av kuttet skal komme fra de 43 %
+  // dårligste byggene. I praksis: F/G-boliger prioriteres for krav og virkemidler.
+  const utsatt   = dagensIdx >= idx("F");
+  const middels  = dagensIdx === idx("D") || dagensIdx === idx("E");
 
-  const oppfyller2030EtterTiltak = nyttIdx <= grense2030;
-  const oppfyller2033EtterTiltak = nyttIdx <= grense2033;
+  const status = utsatt
+    ? { tekst: "Trolig prioritert for krav", farge: C.gold }
+    : middels
+    ? { tekst: "Kan bli berørt på sikt", farge: C.muted }
+    : { tekst: "Godt posisjonert", farge: C.green };
 
   return (
     <div style={{...S.card,marginTop:16,background:`linear-gradient(150deg,${C.navy}06 0%,${C.white} 60%)`,border:`1.5px solid ${C.navy}20`}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
         <div style={S.tag}>EU-direktivet</div>
-        <span style={{fontSize:"0.62rem",color:C.muted,background:C.section,borderRadius:100,padding:"2px 8px",fontWeight:700}}>Forventede krav</span>
+        <span style={{fontSize:"0.62rem",color:C.muted,background:C.section,borderRadius:100,padding:"2px 8px",fontWeight:700}}>Norsk innføring ikke vedtatt</span>
       </div>
       <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:6}}>
         Hvor står boligen din mot EPBD 2024?
       </div>
       <div style={{fontSize:"0.78rem",color:C.muted,lineHeight:1.55,marginBottom:14}}>
-        EUs reviderte bygningsenergidirektiv (EPBD 2024/1275) skisserer skjerpede krav i 2030 og 2033. Norsk implementering er ikke endelig vedtatt - tallene under er forventet retning, ikke gjeldende lov.
+        EUs bygningsenergidirektiv (EPBD 2024/1275) krever at snittforbruket i boligmassen
+        reduseres med 16 % innen 2030 og 20–22 % innen 2035 – og minst 55 % av kuttet skal
+        tas i de dårligste byggene. Direktivet stiller ikke individuelle merkekrav til boliger,
+        men boliger med merke F/G vil mest sannsynlig bli prioritert for fremtidige krav og
+        støtteordninger. Hvordan Norge innfører dette, er ikke endelig avklart.
       </div>
 
-      {rader.map((r, i) => (
-        <div key={r.år} style={{
-          display:"grid",
-          gridTemplateColumns:"60px 1fr auto",
-          gap:12,
-          alignItems:"center",
-          padding:"10px 0",
-          borderTop:i===0?"none":`1px solid ${C.section}`,
-        }}>
-          <div>
-            <div style={{fontWeight:800,fontSize:"0.95rem",color:C.navyDark}}>{r.år}</div>
-            <div style={{fontSize:"0.68rem",color:C.muted}}>{r.lbl}</div>
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{
-              width:30,height:30,borderRadius:8,
-              background:(ENERGIMERKER[idx(r.merkeBokstav)]||{}).farge||C.muted,
-              color:(ENERGIMERKER[idx(r.merkeBokstav)]||{}).tekst||C.white,
-              display:"flex",alignItems:"center",justifyContent:"center",
-              fontSize:"0.95rem",fontWeight:900,fontFamily:"'Fraunces',Georgia,serif",
-              flexShrink:0,
-            }}>{r.merkeBokstav}</div>
-            <div style={{fontSize:"0.76rem",color:C.muted}}>
-              {i===0?"Estimert energimerke":`Minimum merke ${r.merkeBokstav}`}
-            </div>
-          </div>
-          <div style={{
-            background:`${r.st.farge}15`,
-            color:r.st.farge,
-            border:`1px solid ${r.st.farge}40`,
-            borderRadius:100,
-            padding:"4px 11px",
-            fontSize:"0.72rem",
-            fontWeight:800,
-            whiteSpace:"nowrap",
-          }}>{r.st.tekst}</div>
-        </div>
-      ))}
+      <div style={{display:"grid",gridTemplateColumns:"auto 1fr auto",gap:12,alignItems:"center",padding:"10px 0"}}>
+        <div style={{
+          width:34,height:34,borderRadius:9,
+          background:(ENERGIMERKER[dagensIdx]||{}).farge||C.muted,
+          color:(ENERGIMERKER[dagensIdx]||{}).tekst||C.white,
+          display:"flex",alignItems:"center",justifyContent:"center",
+          fontSize:"1.05rem",fontWeight:900,fontFamily:"'Fraunces',Georgia,serif",flexShrink:0,
+        }}>{dagensMerke}</div>
+        <div style={{fontSize:"0.78rem",color:C.muted}}>Ditt estimerte merke i dag</div>
+        <div style={{
+          background:`${status.farge}15`,color:status.farge,border:`1px solid ${status.farge}40`,
+          borderRadius:100,padding:"4px 11px",fontSize:"0.72rem",fontWeight:800,whiteSpace:"nowrap",
+        }}>{status.tekst}</div>
+      </div>
 
       {forbedrer && (
         <div style={{
-          marginTop:14,
-          background:`${C.green}10`,
-          border:`1px solid ${C.green}40`,
-          borderRadius:12,
-          padding:"12px 14px",
-          fontSize:"0.82rem",
-          color:C.navyDark,
-          lineHeight:1.55,
+          marginTop:10,background:`${C.green}10`,border:`1px solid ${C.green}40`,
+          borderRadius:12,padding:"12px 14px",fontSize:"0.82rem",color:C.navyDark,lineHeight:1.55,
         }}>
-          <strong>Med valgte tiltak (nytt merke {nyttMerke}):</strong> Boligen vil sannsynligvis oppfylle {oppfyller2030EtterTiltak && oppfyller2033EtterTiltak ? "både 2030- og 2033-kravene" : oppfyller2030EtterTiltak ? "2030-kravet, men kan ligge nær 2033-grensen" : "ikke fullt ut 2030-kravet - vurder flere tiltak"}.
+          <strong>Med valgte tiltak (nytt estimat: merke {nyttMerke}):</strong> Boligen flyttes
+          {idx(nyttMerke) <= idx("E") ? " ut av gruppen som mest sannsynlig prioriteres for fremtidige krav" : " i riktig retning, men ligger fortsatt i den mest utsatte gruppen"}.
         </div>
       )}
     </div>
@@ -887,6 +976,29 @@ function EnovaBenchmark({ byggeår, dittMerke }) {
       {data.oppdatert && (
         <div style={{fontSize:"0.65rem",color:C.muted,marginTop:10,textAlign:"right"}}>
           Kilde: Enova - oppdatert {new Date(data.oppdatert).toLocaleDateString("nb-NO")}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// FORBEHOLD – antakelser bak estimatet
+// ─────────────────────────────────────────────
+function Forbehold({ resultat }) {
+  const [åpen, setÅpen] = useState(false);
+  return (
+    <div style={{...S.card,marginTop:16,background:C.section,border:`1px solid ${C.border}`}}>
+      <button onClick={()=>setÅpen(!åpen)} style={{background:"none",border:"none",padding:0,width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",fontFamily:"inherit"}}>
+        <span style={{fontWeight:700,fontSize:"0.85rem",color:C.navyDark}}>ℹ️ Forutsetninger og forbehold</span>
+        <span style={{color:C.muted,fontSize:"0.8rem"}}>{åpen?"Skjul ▲":"Vis ▼"}</span>
+      </button>
+      {åpen && (
+        <div style={{fontSize:"0.76rem",color:C.muted,lineHeight:1.65,marginTop:10}}>
+          <p style={{margin:"0 0 8px"}}><strong style={{color:C.navyDark}}>Dette er et estimat, ikke et offisielt energimerke.</strong> Offisiell energiattest krever godkjent energirådgiver og registrering hos Enova. Karakter A krever i tillegg gjennomført tetthetskontroll.</p>
+          <p style={{margin:"0 0 8px"}}><strong style={{color:C.navyDark}}>Karakteren</strong> beregnes med normert Oslo-klima og arealavhengige karaktergrenser (Enovas skala for småhus/leiligheter) – slik det offisielle merket gjøres. Klimasonen du valgte påvirker kun kostnadsestimatet. Isolasjonsstandard, vindustype og lufttetthet er antatt ut fra byggeår der du ikke har oppgitt annet.</p>
+          <p style={{margin:"0 0 8px"}}><strong style={{color:C.navyDark}}>Økonomien</strong> bruker strømpris {(resultat?.weightedCost ?? 1.4).toFixed(2).replace(".",",")} kr/kWh (SSB-nivå inkl. nettleie og avgifter), typiske håndverkerpriser og antar at tiltakene utføres fagmessig. Besparelser ved kombinasjon av tiltak er beregnet multiplikativt (tiltak overlapper – to tiltak på 20 % gir 36 %, ikke 40 %). Solcellegevinst antar ca. 7 kW anlegg og 0,90 kr/kWh verdi.</p>
+          <p style={{margin:0}}><strong style={{color:C.navyDark}}>Enova-støtte</strong> (satser per juni 2026): 25 % av kostnad opp til makssats per tiltak, maks 100 000 kr per bolig 2025–2028. Kun helårsbolig – ikke fritidsbolig. Isolering/vinduer/dører krever byggesøknad før 1. juli 1997. Du må søke og få godkjenning FØR arbeidet starter. Sjekk alltid gjeldende vilkår på enova.no.</p>
         </div>
       )}
     </div>
@@ -1158,8 +1270,8 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
             <div style={S.h2}>EPBD 2024-status</div>
             <div style={{...S.sub,marginBottom:16}}>EU-direktiv 2024/1275</div>
             {[
-              {krav:"EU-krav 2030 (merke E)",ok:merke.merke<="E",tekst:merke.merke<="E"?"Oppfylt":"Tiltak anbefales innen 2030"},
-              {krav:"EU-krav 2033 (merke D)",ok:merke.merke<="D",tekst:merke.merke<="D"?"Oppfylt":"Tiltak anbefales innen 2033"},
+              {krav:"EPBD 2030: F/G-boliger prioriteres for nasjonale krav",ok:merke.merke<="E",tekst:merke.merke<="E"?"Utenfor mest utsatt gruppe":"I gruppen som trolig prioriteres"},
+              {krav:"EPBD 2035: skjerpede bestandsmål (−20–22 %)",ok:merke.merke<="D",tekst:merke.merke<="D"?"Godt posisjonert":"Tiltak anbefales"},
               {krav:"nZEB-standard (merke A/B)",ok:merke.merke<="B",tekst:merke.merke<="B"?"Tilfredsstiller nZEB":`Krever ned til ≤ 100 kWh/m²/år`},
               {krav:"Primærenergi < 225 kWh/m²",ok:primærPerM2<225,tekst:primærPerM2<225?`Oppfylt (${primærPerM2})`:`Overskrides (${primærPerM2})`},
             ].map(x=>(
@@ -1188,7 +1300,7 @@ function FullRapport({ resultat, epost, pdfSendt, pakke, onNullstill }) {
           const bestTiltak = høyAlle[0];
           const harIsolering = høyAlle.some(t => t.id.startsWith("isolering"));
           const harVentilasjon = høyAlle.some(t => t.id === "ventilasjon");
-          const søknadstekst = `Jeg søker om støtte til energitiltak i min bolig. Boligen ble bygget i perioden ${resultat.bygData.label} og har i dag estimert energimerke ${merke.merke}. Tiltakene jeg planlegger å gjennomføre er: ${høyAlle.map(t=>t.navn).join(", ")}. Forventet energibesparelse er ca. ${høyAlle.reduce((s,t)=>s+Math.round(totalKwh*t.kWh_pct),0).toLocaleString("no")} kWh per år, noe som tilsvarer ca. ${totBes.toLocaleString("no")} kroner i reduserte strømutgifter. Tiltakene vil forbedre boligens energimerke fra ${merke.merke} til estimert ${merkePotensial.merke}.`;
+          const søknadstekst = `Jeg søker om støtte til energitiltak i min bolig. Boligen ble bygget i perioden ${resultat.bygData.label} og har i dag estimert energimerke ${merke.merke}. Tiltakene jeg planlegger å gjennomføre er: ${høyAlle.map(t=>t.navn).join(", ")}. Forventet energibesparelse er ca. ${høyAlle.reduce((s,t)=>s+Math.round((resultat.oppvarmingKwh??totalKwh)*t.kWh_pct),0).toLocaleString("no")} kWh per år, noe som tilsvarer ca. ${totBes.toLocaleString("no")} kroner i reduserte strømutgifter. Tiltakene vil forbedre boligens energimerke fra ${merke.merke} til estimert ${merkePotensial.merke}.`;
 
           return (
             <>
@@ -1434,16 +1546,17 @@ function KunnskapsHub() {
           <div>
             <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark,marginBottom:12}}>Energimerking A–G forklart</div>
 
-            {/* Visuell skala – Kilde: Energimerkeforskriften (FOR-2009-12-18-1665) */}
+            {/* Visuell skala. Grensene er AREALAVHENGIGE – her vist for en bolig på 120 m².
+                Kilde: Enovas karakterskala for småhus/leiligheter */}
             <div style={{marginBottom:18}}>
               {[
-                {m:"A",farge:"#00a651",maks:"≤ 70",tekst:"nZEB-klar – svært energieffektiv"},
-                {m:"B",farge:"#57b946",maks:"71–100",tekst:"God standard – lavenergibolig"},
-                {m:"C",farge:"#b5d334",maks:"101–150",tekst:"Over middels – moderne TEK10-bygg"},
-                {m:"D",farge:"#ffd200",maks:"151–200",tekst:"Middels – typisk 1990-tallsbolig"},
-                {m:"E",farge:"#f7941d",maks:"201–250",tekst:"Under middels – EU-krav 2030"},
-                {m:"F",farge:"#ed1c24",maks:"251–300",tekst:"Dårlig – bør oppgraderes"},
-                {m:"G",farge:"#9e1a20",maks:"> 300",tekst:"Svært dårlig – høy prioritet"},
+                {m:"A",farge:"#00a651",maks:"≤ 102",tekst:"Svært energieffektiv – krever tetthetskontroll"},
+                {m:"B",farge:"#57b946",maks:"≤ 133",tekst:"TEK17-nivå – god standard"},
+                {m:"C",farge:"#b5d334",maks:"≤ 166",tekst:"Over middels – moderne bygg"},
+                {m:"D",farge:"#ffd200",maks:"≤ 209",tekst:"Middels – typisk 1990-tallsbolig"},
+                {m:"E",farge:"#f7941d",maks:"≤ 253",tekst:"Under middels – eldre bolig"},
+                {m:"F",farge:"#ed1c24",maks:"≤ 317",tekst:"Dårlig – bør oppgraderes"},
+                {m:"G",farge:"#9e1a20",maks:"> 317",tekst:"Svært dårlig – høy prioritet"},
               ].map(r => (
                 <div key={r.m} style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
                   <div style={{width:28,height:28,borderRadius:7,background:r.farge,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:"0.9rem",flexShrink:0}}>{r.m}</div>
@@ -1453,12 +1566,12 @@ function KunnskapsHub() {
                   <div style={{fontSize:"0.72rem",color:C.navyDark,fontWeight:700,flexShrink:0,width:60,textAlign:"right"}}>{r.maks} kWh</div>
                 </div>
               ))}
-              <div style={{fontSize:"0.7rem",color:C.muted,marginTop:6}}>Tall i kWh/m²/år (levert energi)</div>
+              <div style={{fontSize:"0.7rem",color:C.muted,marginTop:6}}>Tall i kWh/m²/år (levert energi) – eksempel for 120 m² bolig. Grensene er romsligere for små boliger og strengere for store.</div>
             </div>
 
             <div style={{display:"grid",gap:10}}>
               {[
-                {ikon:"📐", tittel:"Hvordan beregnes energimerket?", tekst:"Energimerket beregnes ut fra boligens levert energi per m² per år (kWh/m²/år). Terskelverdiene er: A ≤ 70, B 71–100, C 101–150, D 151–200, E 201–250, F 251–300, G > 300 kWh/m²/år. Beregningsstandarden er NS-EN ISO 52000."},
+                {ikon:"📐", tittel:"Hvordan beregnes energimerket?", tekst:"Energimerket beregnes ut fra boligens leverte energi per m² per år (NS 3031), med normert Oslo-klima og standardisert bruk – uansett hvor i landet boligen står. Karaktergrensene avhenger av boligens areal: for en bolig på 120 m² går grensen for B ved ca. 133 kWh/m², for en på 250 m² ved ca. 126 kWh/m²."},
                 {ikon:"💰", tittel:"Hvorfor betyr energimerket noe for boligverdien?", tekst:"Studier viser at boliger med energimerke A eller B kan selges for 3–8 % mer enn tilsvarende boliger med lavere merke. I tillegg gir godt energimerke tilgang til grønne boliglån med 0,2–0,5 % lavere rente."},
                 {ikon:"🤔", tittel:"Vanlige misforståelser", tekst:"Mange tror at nye vinduer alene gir A-merke – det stemmer ikke. Det er den totale varmebalansen som teller. En gammel enebolig med god varmepumpe og etterpolert tak kan slå en ny enebolig med dårlig oppvarming. Oppvarmingssystemet teller mye."},
                 {ikon:"🏛️", tittel:"Estimat vs. offisielt merke", tekst:"BoligEffekts merke er et estimat basert på statistiske data for byggeår og standard. Et offisielt energimerke krever befaring av godkjent energirådgiver og registrering i Enovas database. Det offisielle merket er påkrevet ved salg og utleie."},
@@ -1493,7 +1606,9 @@ function KunnskapsHub() {
                 {tiltak:"Balansert ventilasjon m/VGJ", min:5000,  max:15000, krav:"25 % av kostnad, maks 15 000 kr"},
                 {tiltak:"Solcelleanlegg",              min:10000, max:37500, krav:"2 500 kr/kW, maks 15 kW (maks 37 500 kr)"},
                 {tiltak:"Varmepumpebereder",           min:1250,  max:5000,  krav:"25 % av kostnad, maks 5 000 kr"},
-                {tiltak:"Akkumulatortank",             min:1250,  max:5000,  krav:"25 % av kostnad, maks 5 000 kr"},
+                {tiltak:"Smart varmtvannsbereder",     min:1000,  max:4000,  krav:"25 % av kostnad, maks 4 000 kr"},
+                {tiltak:"Energilagring (batteri)",     min:2500,  max:10000, krav:"25 % av kostnad, maks 10 000 kr"},
+                {tiltak:"Energirådgivning",            min:1250,  max:5000,  krav:"25 % av kostnad, maks 5 000 kr – sertifisert rådgiver"},
               ].map(x=>(
                 <div key={x.tiltak} style={{borderRadius:10,padding:"11px 13px",background:C.section}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
@@ -1505,7 +1620,7 @@ function KunnskapsHub() {
               ))}
             </div>
 
-            <div style={{textAlign:"center",fontSize:"0.7rem",color:"#bbb",marginBottom:14}}>Sist oppdatert: August 2025 (gjeldende satser)</div>
+            <div style={{textAlign:"center",fontSize:"0.7rem",color:"#bbb",marginBottom:14}}>Satser per juni 2026 · Maks 100 000 kr per bolig 2025–2028 · Kun helårsbolig (ikke fritidsbolig) · Søk FØR oppstart</div>
 
             {/* Søknadssteg – steg 1 synlig, resten låst */}
             <div style={{fontWeight:700,fontSize:"0.9rem",color:C.navyDark,marginBottom:10}}>Slik søker du Enova-støtte – steg for steg</div>
@@ -1562,7 +1677,7 @@ function KunnskapsHub() {
             <div style={{display:"grid",gap:12,marginBottom:18}}>
               {[
                 {tag:"TEK17",farge:C.navy,tittel:"Teknisk forskrift 2017 (TEK17)",tekst:"Gjeldende byggeforskrift i Norge. Stiller krav til U-verdier (vegg ≤ 0,18, tak ≤ 0,13 W/m²K), lufttetthet (n50 ≤ 0,6/h) og primærenergibehov ≤ 120 kWh/m²/år for nye bygg. Gjelder for nybygg og større rehabiliteringsprosjekter.",lenke:"https://lovdata.no/dokument/SF/forskrift/2017-06-19-840"},
-                {tag:"EPBD 2024",farge:"#6d28d9",tittel:"EU-direktiv 2024/1275 (EPBD recast)",tekst:"Europaparlamentets reviderte energidirektiv pålegger alle EU/EØS-land å sikre at eksisterende boliger oppgraderes. Boliger i verst presterende 15 % (typisk merke F og G) skal oppnå merke E innen 2030 og D innen 2033. For norske boliger betyr dette konkrete oppgraderingskrav. nZEB-standard (A/B) kreves for nye bygg.",lenke:"https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32024L1275"},
+                {tag:"EPBD 2024",farge:"#6d28d9",tittel:"EU-direktiv 2024/1275 (EPBD recast)",tekst:"EUs reviderte bygningsenergidirektiv. For boliger: snittforbruket i hele boligmassen skal ned 16 % innen 2030 og 20–22 % innen 2035, og minst 55 % av kuttet skal komme fra de 43 % dårligste byggene. Merk: kravene om minimum merke E (2030) / D (2033) gjelder YRKESBYGG, ikke boliger. Norsk innføring er ikke endelig vedtatt (EØS-prosess).",lenke:"https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32024L1275"},
                 {tag:"Energimerkeforskriften",farge:C.green,tittel:"Energimerkeforskriften (FOR-2009-12-18-1665)",tekst:"Norsk forskrift som pålegger selgere og utleiere å fremlegge gyldig energiattest. Offisielt merke utstedes av godkjent energirådgiver via NVEs/Enovas portal og er gyldig i 10 år. Manglende energiattest ved salg kan gi kjøper krav på prisavslag.",lenke:"https://lovdata.no/dokument/SF/forskrift/2009-12-18-1665"},
                 {tag:"NS-EN ISO 52000",farge:C.gold,tittel:"NS-EN ISO 52000 – Energiytelse i bygninger",tekst:"Europeisk standard som definerer beregningsmetodikk for levert energi, primærenergi og energimerking av bygninger. BoligEffekt bruker en forenklet beregning basert på denne standarden kombinert med norske TEK-historikkdata og klimakorreksjoner.",lenke:"https://www.standard.no"},
               ].map(x=>(
@@ -1578,11 +1693,10 @@ function KunnskapsHub() {
             {/* Tidslinje */}
             <div style={{fontWeight:700,fontSize:"0.9rem",color:C.navyDark,marginBottom:12}}>Tidslinje: krav som gjelder deg</div>
             {[
-              {ar:"2021",farge:C.green,tekst:"nZEB-krav for alle nye bygg i Norge. Nye boliger skal ha primærenergi under 95 kWh/m²/år."},
-              {ar:"2025",farge:C.gold,tekst:"EU-landene skal ha nasjonale planer for oppgradering av bygningsmasse. Energirådgivning blir mer tilgjengelig."},
-              {ar:"2030",farge:"#f7941d",tekst:"Alle boliger i verst presterende 15 % (merke F/G) skal nå minimum energimerke E. Boliger bygget før 1980 er mest utsatt."},
-              {ar:"2033",farge:"#ed1c24",tekst:"Skjerpet krav: minimum energimerke D. Boliger fra 1950–1970 uten etterisolering vil typisk ikke oppfylle dette uten tiltak."},
-              {ar:"2050",farge:C.navyDark,tekst:"Målet er klimanøytral bygningsmasse i hele EU/EØS. nZEB-standard (A/B-merke) bør være normen for alle boliger."},
+              {ar:"2026",farge:C.gold,tekst:"Frist for EU-landene å innføre EPBD 2024 i nasjonal rett (mai 2026). Norge er i EØS-prosess – endelige norske regler er ikke vedtatt."},
+              {ar:"2030",farge:"#f7941d",tekst:"EU-mål: snittforbruket i boligmassen ned 16 %. Minst 55 % av kuttet skal tas i de dårligste byggene – F/G-boliger prioriteres for krav og virkemidler."},
+              {ar:"2035",farge:"#ed1c24",tekst:"EU-mål: snittforbruket i boligmassen ned 20–22 %. Dårlig energimerke kan da i økende grad påvirke boligverdi og lånevilkår."},
+              {ar:"2050",farge:C.navyDark,tekst:"Mål om klimanøytral bygningsmasse i hele EU/EØS. Nullutslippsstandard blir normen for nybygg."},
             ].map(x=>(
               <div key={x.ar} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:12}}>
                 <div style={{background:x.farge,color:"#fff",borderRadius:8,padding:"4px 8px",fontSize:"0.72rem",fontWeight:800,flexShrink:0,minWidth:40,textAlign:"center"}}>{x.ar}</div>
@@ -1614,8 +1728,8 @@ function KunnskapsHub() {
           <div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
               <div>
-                <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark}}>Siste nyheter</div>
-                <div style={{fontSize:"0.76rem",color:C.muted,marginTop:2}}>Energimerking, Enova og boligoppgradering</div>
+                <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.1rem",color:C.navyDark}}>Aktuelt om energi</div>
+                <div style={{fontSize:"0.76rem",color:C.muted,marginTop:2}}>KI-generert oppsummering – kan inneholde feil, sjekk kildene</div>
               </div>
               <button
                 onClick={()=>hentNyheter(true)}
@@ -1700,9 +1814,11 @@ function Chatbot() {
   }
 
   return (
-    <div style={{position:"fixed",bottom:window.innerWidth<=600?80:24,right:20,zIndex:1000,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10}}>
+    // Posisjon styres av .be-chat-root i index.css (media queries) – window.innerWidth i render
+    // oppdateres ikke ved resize/rotasjon og ga feil plassering på mobil.
+    <div className="be-chat-root" style={{position:"fixed",right:20,zIndex:1000,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10}}>
       {aapen && (
-        <div style={{width:310,height:420,background:C.white,borderRadius:18,boxShadow:"0 12px 48px rgba(27,58,92,0.18)",border:`1px solid ${C.border}`,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div className="be-chat-window" style={{background:C.white,borderRadius:18,boxShadow:"0 12px 48px rgba(27,58,92,0.18)",border:`1px solid ${C.border}`,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           {/* Header */}
           <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div>
@@ -1729,9 +1845,10 @@ function Chatbot() {
             {laster && (
               <div style={{display:"flex",justifyContent:"flex-start"}}>
                 <div style={{padding:"9px 14px",borderRadius:"14px 14px 14px 4px",background:C.section,fontSize:"0.8rem",color:C.muted,display:"flex",gap:4,alignItems:"center"}}>
-                  <span style={{animation:"pulse 1s infinite"}}>●</span>
-                  <span style={{animationDelay:"0.2s",animation:"pulse 1s 0.2s infinite"}}>●</span>
-                  <span style={{animationDelay:"0.4s",animation:"pulse 1s 0.4s infinite"}}>●</span>
+                  {/* be-pulse-dot finnes i index.css – «pulse» gjorde det ikke, så prikkene sto stille */}
+                  <span style={{animation:"be-pulse-dot 1s infinite"}}>●</span>
+                  <span style={{animation:"be-pulse-dot 1s 0.2s infinite"}}>●</span>
+                  <span style={{animation:"be-pulse-dot 1s 0.4s infinite"}}>●</span>
                 </div>
               </div>
             )}
@@ -1740,7 +1857,8 @@ function Chatbot() {
           {/* Input */}
           <div style={{padding:"10px 10px 12px",borderTop:`1px solid ${C.section}`,display:"flex",gap:7}}>
             <input
-              style={{flex:1,padding:"9px 12px",borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:"0.82rem",color:C.navyDark,background:"#fafafa",outline:"none"}}
+              aria-label="Skriv spørsmål til assistenten"
+              style={{flex:1,minWidth:0,padding:"9px 12px",borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:"1rem",color:C.navyDark,background:"#fafafa",outline:"none"}}
               placeholder="Skriv spørsmål…"
               value={melding}
               onChange={e=>setMelding(e.target.value)}
@@ -1763,6 +1881,7 @@ function Chatbot() {
         onMouseEnter={e=>e.currentTarget.style.transform="scale(1.08)"}
         onMouseLeave={e=>e.currentTarget.style.transform=""}
         title="BoligEffekt Assistent"
+        aria-label={aapen ? "Lukk chat" : "Åpne chat med BoligEffekt-assistenten"}
       >
         {aapen ? "×" : "💬"}
       </button>
@@ -1809,7 +1928,11 @@ export default function App() {
 
     const lagret = hentData();
     if (!lagret || !lagret.resultat) {
+      // Skjer typisk når Stripe-checkout åpnes/fullføres i en annen nettleser/app-nettleser
+      // på mobil – sessionStorage følger ikke med. Vis bekreftelse i stedet for å feile stille.
       console.error("[REDIRECT] Ingen lagret data i sessionStorage – kan ikke gjenopprette rapport");
+      setSkjerm("betalt_uten_data");
+      window.history.replaceState({}, "", "/");
       return;
     }
 
@@ -1847,6 +1970,26 @@ export default function App() {
     setSkjerm("start"); setSteg(0); setSvar({}); setOppvarmingValg([]);
     setResultat(null); setInput(null); setBetalt(false); setSessionId(null);
   }
+
+  // Betaling fullført, men resultatdata gikk tapt (f.eks. annen nettleser på mobil)
+  if (skjerm === "betalt_uten_data") return (
+    <div style={S.app}>
+      <Header onHome={nullstill}/>
+      <div style={S.wrap}>
+        <div style={{...S.card,textAlign:"center",padding:"36px 24px"}}>
+          <div style={{fontSize:"2.6rem",marginBottom:12}}>✅</div>
+          <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:800,fontSize:"1.3rem",color:C.navyDark,marginBottom:10}}>Betalingen er mottatt</div>
+          <div style={{fontSize:"0.88rem",color:C.muted,lineHeight:1.7,marginBottom:20}}>
+            Vi fant ikke igjen analysen din i denne nettleseren (det kan skje hvis betalingen
+            ble fullført i et annet vindu eller en app-nettleser på mobil).<br/><br/>
+            Rapporten sendes til e-postadressen du oppga i betalingen. Hvis den ikke dukker opp
+            innen kort tid, kontakt oss på <a href="mailto:kontakt@boligeffekt.no" style={{color:C.navy,fontWeight:700}}>kontakt@boligeffekt.no</a> – så ordner vi det.
+          </div>
+          <button onClick={nullstill} style={S.btnP}>Til forsiden →</button>
+        </div>
+      </div>
+    </div>
+  );
 
   // Resultat-skjerm
   if (skjerm === "resultat" && resultat) {
@@ -2139,12 +2282,12 @@ export default function App() {
               </div>
               <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.3rem",color:C.navyDark,marginBottom:6}}>Enkel analyse</div>
               <div style={{...S.sub,marginBottom:22}}>6 spørsmål · 2 minutter · Ingen fagkunnskap nødvendig</div>
-              <div className="be-cta-btn" style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,color:C.white,borderRadius:12,padding:"14px 36px",fontWeight:700,fontSize:"0.98rem",display:"inline-block",boxShadow:"0 4px 20px rgba(27,58,92,0.30)",letterSpacing:"-0.01em",cursor:"pointer"}}>
+              <button className="be-cta-btn" style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,color:C.white,border:"none",borderRadius:12,padding:"14px 36px",fontWeight:700,fontSize:"0.98rem",fontFamily:"inherit",display:"inline-block",boxShadow:"0 4px 20px rgba(27,58,92,0.30)",letterSpacing:"-0.01em",cursor:"pointer"}}>
                 Start gratis analyse →
-              </div>
+              </button>
               <div style={{fontSize:"0.74rem",color:C.muted,marginTop:14,display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                 <span style={{color:C.gold}}>💡</span>
-                Enova-støtte opptil 136 000 kr · Ingen registrering
+                Enova-støtte opptil 100 000 kr · Ingen registrering
               </div>
             </div>
           </div>
@@ -2235,7 +2378,7 @@ export default function App() {
                   </svg>
                 </div>
                 <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:800,fontSize:"1rem",color:C.navyDark,marginBottom:7}}>Sparepotensial og støtte</div>
-                <div style={{fontSize:"0.8rem",color:C.muted,lineHeight:1.65}}>Tilpassede tiltak, Enova-støtte opptil 136 000 kr og full ROI-analyse med tilbakebetalingstid.</div>
+                <div style={{fontSize:"0.8rem",color:C.muted,lineHeight:1.65}}>Tilpassede tiltak, Enova-støtte opptil 100 000 kr og full ROI-analyse med tilbakebetalingstid.</div>
               </div>
 
             </div>
@@ -2246,10 +2389,10 @@ export default function App() {
 
           {/* Privacy footer */}
           <div style={{fontSize:"0.72rem",color:"#aaa",textAlign:"center",padding:"20px 0 8px"}}>
-            © 2025 BoligEffekt
-            {" · "}<span style={{cursor:"pointer",textDecoration:"underline"}} onClick={()=>setModal("personvern")}>Personvern</span>
-            {" · "}<span style={{cursor:"pointer",textDecoration:"underline"}} onClick={()=>setModal("vilkår")}>Vilkår</span>
-            {" · "}<span style={{cursor:"pointer",textDecoration:"underline"}} onClick={()=>setModal("ki")}>Om bruk av KI</span>
+            © {new Date().getFullYear()} BoligEffekt
+            {" · "}<button className="be-footer-link" onClick={()=>setModal("personvern")}>Personvern</button>
+            {" · "}<button className="be-footer-link" onClick={()=>setModal("vilkår")}>Vilkår</button>
+            {" · "}<button className="be-footer-link" onClick={()=>setModal("ki")}>Om bruk av KI</button>
             {" · "}<a href="https://www.instagram.com/boligeffekt" target="_blank" rel="noopener noreferrer" style={{color:"#aaa",textDecoration:"none"}}>Instagram</a>
             {" · "}<a href="https://www.facebook.com/boligeffekt" target="_blank" rel="noopener noreferrer" style={{color:"#aaa",textDecoration:"none"}}>Facebook</a>
           </div>
@@ -2258,13 +2401,13 @@ export default function App() {
 
       {/* Privacy modal */}
       {modal && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setModal(null)}>
-          <div style={{background:C.white,borderRadius:20,maxWidth:500,width:"100%",overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,0.25)"}} onClick={e=>e.stopPropagation()}>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setModal(null)} onKeyDown={e=>e.key==="Escape"&&setModal(null)}>
+          <div role="dialog" aria-modal="true" aria-label={MODAL_INNHOLD[modal].tittel} style={{background:C.white,borderRadius:20,maxWidth:500,width:"100%",maxHeight:"85dvh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,0.25)"}} onClick={e=>e.stopPropagation()}>
             <div style={{background:`linear-gradient(135deg,${C.navy},${C.navyMid})`,padding:"18px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <div style={{color:C.white,fontWeight:700,fontSize:"1rem"}}>{MODAL_INNHOLD[modal].tittel}</div>
               <button onClick={()=>setModal(null)} style={{background:"rgba(255,255,255,0.15)",border:"none",color:C.white,borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:"1.2rem",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
             </div>
-            <div style={{padding:32}}>
+            <div style={{padding:32,overflowY:"auto"}}>
               <p style={{fontSize:"0.87rem",color:C.navyDark,lineHeight:1.75,margin:0}}>{MODAL_INNHOLD[modal].tekst}</p>
             </div>
           </div>

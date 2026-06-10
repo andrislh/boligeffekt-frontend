@@ -2,33 +2,72 @@
 <html lang="no">
   <head>
     <meta charset="utf-8" />
-    <link rel="preconnect" href="https://fonts.googleapis.com"/>
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap"/>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231b3a5c'/><path d='M50 15 L85 40 L85 85 Q85 88 82 88 L18 88 Q15 88 15 85 L15 40 Z' fill='%232ab55a'/><path d='M54 45 L46 62 L52 62 L46 78 L62 58 L55 58 Z' fill='white'/></svg>" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#1b3a5c" />
-    <meta name="description" content="Få energianalyse av boligen din på 5 minutter. Se energikarakter A–G, anbefalte tiltak og Enova-støtte. Fra 199 kr." />
-    <meta property="og:title" content="BoligEffekt – Energianalyse for boligen din" />
-    <meta property="og:description" content="Finn energimerket ditt og spar på strøm. Fra 199 kr." />
-    <meta property="og:image" content="https://boligeffekt.no/og-image.png" />
-    <meta property="og:url" content="https://boligeffekt.no" />
+
+    <!-- Fonter: lastes her i stedet for via @import i CSS (raskere første rendring).
+         Playfair Display er fjernet – den ble aldri brukt i appen. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap" />
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231b3a5c'/><path d='M50 15 L85 40 L85 85 Q85 88 82 88 L18 88 Q15 88 15 85 L15 40 Z' fill='%232ab55a'/><path d='M54 45 L46 62 L52 62 L46 78 L62 58 L55 58 Z' fill='white'/></svg>" />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <title>BoligEffekt – Finn energimerket og spar på strøm</title>
+    <link rel="canonical" href="https://www.boligeffekt.no/" />
+
+    <!-- SEO -->
+    <title>BoligEffekt – Finn energimerket på boligen din gratis</title>
+    <meta name="description" content="Gratis energianalyse av boligen din på 2 minutter. Se estimert energimerke A–G, hvilke tiltak som lønner seg og hvor mye Enova-støtte du kan få." />
+
+    <!-- Open Graph / deling -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="BoligEffekt" />
+    <meta property="og:title" content="BoligEffekt – Finn energimerket på boligen din gratis" />
+    <meta property="og:description" content="Gratis energianalyse på 2 minutter. Energimerke A–G, lønnsomme tiltak og Enova-støtte." />
+    <meta property="og:image" content="https://www.boligeffekt.no/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="https://www.boligeffekt.no/" />
+    <meta property="og:locale" content="nb_NO" />
+
+    <!-- Twitter/X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="BoligEffekt – Finn energimerket på boligen din gratis" />
+    <meta name="twitter:description" content="Gratis energianalyse på 2 minutter. Energimerke A–G, lønnsomme tiltak og Enova-støtte." />
+    <meta name="twitter:image" content="https://www.boligeffekt.no/og-image.png" />
+
+    <!-- Strukturerte data for Google -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "name": "BoligEffekt",
+          "url": "https://www.boligeffekt.no/",
+          "inLanguage": "nb-NO",
+          "description": "Gratis energianalyse av boligen din. Estimert energimerke A–G, anbefalte tiltak og Enova-støtte."
+        },
+        {
+          "@type": "Service",
+          "name": "BoligEffekt Oppgraderingsplan",
+          "serviceType": "Energianalyse av bolig",
+          "areaServed": "NO",
+          "provider": { "@type": "Organization", "name": "BoligEffekt" },
+          "offers": {
+            "@type": "Offer",
+            "price": "399",
+            "priceCurrency": "NOK",
+            "description": "Komplett energirapport med tiltaksplan, økonomianalyse og Enova-søknadspakke"
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>BoligEffekt krever JavaScript. Slå på JavaScript i nettleseren din for å bruke energianalysen.</noscript>
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
   </body>
 </html>
