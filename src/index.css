@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap');
+/* Fontene lastes nå via <link> i public/index.html (raskere enn @import, som blokkerer rendring) */
 
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -89,24 +89,18 @@ body {
   transition: transform 0.22s cubic-bezier(.22,1,.36,1),
               box-shadow 0.22s ease;
 }
-.be-card:hover {
-  transform: translateY(-3px) !important;
-  box-shadow: 0 20px 56px rgba(13,34,56,0.13) !important;
-}
 
 /* Primary button */
 .be-btn-p {
   transition: transform 0.18s cubic-bezier(.22,1,.36,1),
               box-shadow 0.18s ease;
 }
-.be-btn-p:hover  { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(27,58,92,0.40) !important; }
 .be-btn-p:active { transform: scale(0.97); }
 
 /* Ghost button */
 .be-btn-g {
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
-.be-btn-g:hover { border-color: rgba(27,58,92,0.3) !important; background: rgba(27,58,92,0.05) !important; }
 
 /* Choice buttons */
 .be-choice {
@@ -115,10 +109,6 @@ body {
               border-color 0.15s ease,
               background 0.15s ease,
               color 0.15s ease;
-}
-.be-choice:hover {
-  transform: translateY(-3px) !important;
-  box-shadow: 0 8px 24px rgba(27,58,92,0.14) !important;
 }
 .be-choice:active {
   animation: be-pop 0.28s cubic-bezier(.36,.07,.19,.97);
@@ -130,11 +120,6 @@ body {
   background-size: 200% auto !important;
   animation: be-glow-pulse 3s ease-in-out infinite;
   transition: transform 0.18s cubic-bezier(.22,1,.36,1), opacity 0.15s ease !important;
-}
-.be-cta-btn:hover {
-  transform: translateY(-2px) scale(1.01) !important;
-  animation: none !important;
-  box-shadow: 0 10px 36px rgba(27,58,92,0.38) !important;
 }
 .be-cta-btn:active {
   transform: scale(0.97) !important;
@@ -151,9 +136,30 @@ body {
   outline: none;
 }
 
+/* Hover-effekter kun på enheter med ekte hover (mus/styreflate).
+   På touch-skjermer «henger» hover-tilstander igjen etter trykk og
+   gjorde at kort/knapper ble stående forskjøvet på mobil. */
+@media (hover: hover) and (pointer: fine) {
+  .be-card:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 20px 56px rgba(13,34,56,0.13) !important;
+  }
+  .be-btn-p:hover  { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(27,58,92,0.40) !important; }
+  .be-btn-g:hover { border-color: rgba(27,58,92,0.3) !important; background: rgba(27,58,92,0.05) !important; }
+  .be-choice:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 8px 24px rgba(27,58,92,0.14) !important;
+  }
+  .be-cta-btn:hover {
+    transform: translateY(-2px) scale(1.01) !important;
+    animation: none !important;
+    box-shadow: 0 10px 36px rgba(27,58,92,0.38) !important;
+  }
+  .be-merke:hover { transform: scale(1.06) rotate(2deg); }
+}
+
 /* Merke badge */
 .be-merke { transition: transform 0.22s ease; }
-.be-merke:hover { transform: scale(1.06) rotate(2deg); }
 
 /* Active dot in live indicator */
 .be-live-dot { animation: be-pulse-dot 2s ease-in-out infinite; }
@@ -236,5 +242,73 @@ body {
     flex-direction: column;
     align-items: flex-start !important;
     gap: 6px !important;
+  }
+
+  /* iOS Safari auto-zoomer inn på inputfelt med font-size < 16px.
+     Tving 16px på alle skjemafelt på mobil – fikser «siden zoomer inn
+     og blir stående zoomet» ved utfylling av e-post/adresse. */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* ═══════════════════════════════════
+   CHATBOT (mobiltilpasning)
+═══════════════════════════════════ */
+
+.be-chat-root {
+  bottom: 24px;
+}
+
+.be-chat-window {
+  width: 330px;
+  height: 440px;
+  max-height: calc(100dvh - 140px);
+}
+
+@media (max-width: 600px) {
+  .be-chat-root {
+    /* env(safe-area-inset-bottom) holder boblen over iPhone-håndtaket/Safari-verktøylinjen */
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    right: 14px !important;
+  }
+  .be-chat-window {
+    width: calc(100vw - 28px);
+    max-width: 360px;
+    height: min(440px, calc(100dvh - 130px));
+  }
+}
+
+/* ═══════════════════════════════════
+   TILGJENGELIGHET / DIVERSE
+═══════════════════════════════════ */
+
+/* Footer-lenker som ekte knapper (var <span> uten tastaturstøtte) */
+.be-footer-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Synlig fokusmarkering for tastaturnavigasjon */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid #1B3A5C;
+  outline-offset: 2px;
+}
+
+/* Respekter systeminnstilling for redusert bevegelse */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
