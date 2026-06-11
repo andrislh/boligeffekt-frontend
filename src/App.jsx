@@ -446,20 +446,30 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
           </div>
         </div>
 
-        {/* Uskarp forhåndsvisning av tiltak */}
-        {/* Blurred tiltak preview */}
-        <div className="be-in-1" style={{position:"relative",marginBottom:16}}>
-          <div style={{...S.card,filter:"blur(4px)",userSelect:"none",pointerEvents:"none",opacity:0.5}}>
-            <div style={{fontWeight:700,marginBottom:12,color:C.navyDark}}>Anbefalte tiltak</div>
-            {[0,1,2].map(i=><div key={i} style={{background:C.section,borderRadius:12,padding:14,marginBottom:8}}><div style={{height:11,background:"#D8D4CC",borderRadius:6,width:"60%",marginBottom:8}}/><div style={{height:7,background:"#E4E0D8",borderRadius:6,width:"80%"}}/></div>)}
+        {/* Personlig forhåndsvisning: ekte tiltaksnavn for boligen, men tallene
+            (kr spart, Enova-støtte, tilbakebetaling) er låst – det er den betalte verdien.
+            Mer overbevisende enn ren blur fordi den viser at analysen er relevant for nettopp deg. */}
+        <div className="be-in-1" style={{...S.card,marginBottom:16,border:`1.5px solid ${C.green}30`}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+            <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,color:C.navyDark}}>Tiltak vi fant for din bolig</div>
+            <span style={{fontSize:"0.72rem",fontWeight:700,color:C.green,background:`${C.green}14`,borderRadius:100,padding:"3px 10px"}}>{tiltak.length} totalt</span>
           </div>
-          <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <div style={{background:C.white,borderRadius:18,padding:"22px 26px",boxShadow:"0 12px 40px rgba(0,0,0,0.14)",textAlign:"center",border:`2px solid ${C.green}45`}}>
-              <div style={{fontSize:"1.6rem",marginBottom:6}}>🔒</div>
-              <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,color:C.navyDark,fontSize:"1rem"}}>{høy.length} tiltak identifisert</div>
-              <div style={{fontSize:"0.78rem",color:C.muted,marginTop:4}}>Kjøp rapporten for å låse opp</div>
+          {tiltak.slice(0,3).map(t=>(
+            <div key={t.id} style={{display:"flex",alignItems:"center",gap:12,background:C.section,borderRadius:12,padding:"12px 14px",marginBottom:8}}>
+              <span style={{fontSize:"1.3rem",flexShrink:0}}>{t.ikon}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:"0.9rem",color:C.navyDark,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.navn}</div>
+                <div style={{display:"flex",gap:6,marginTop:5,alignItems:"center"}}>
+                  <span style={{fontSize:"0.7rem",color:C.muted}}>Sparer</span>
+                  <span style={{height:9,width:48,background:"repeating-linear-gradient(90deg,#D8D4CC 0 6px,transparent 6px 9px)",borderRadius:4}}/>
+                  <span style={{fontSize:"0.7rem",color:C.muted}}>kr/år · Enova</span>
+                  <span style={{height:9,width:36,background:"repeating-linear-gradient(90deg,#D8D4CC 0 6px,transparent 6px 9px)",borderRadius:4}}/>
+                </div>
+              </div>
+              <span style={{fontSize:"0.95rem",opacity:0.45}}>🔒</span>
             </div>
-          </div>
+          ))}
+          {tiltak.length>3 && <div style={{fontSize:"0.78rem",color:C.muted,textAlign:"center",marginTop:4}}>+ {tiltak.length-3} flere tiltak, alle med tall, i rapporten</div>}
         </div>
 
         {/* Del resultatet */}
@@ -483,6 +493,15 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
               <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:900,fontSize:"1.9rem",color:C.navyDark,lineHeight:1}}>{PAKKE.pris} kr</div>
               <div style={{fontSize:"0.7rem",color:C.muted,marginTop:2}}>inkl. mva</div>
             </div>
+          </div>
+          {/* Dette får du – konkret verdi (ærlig alternativ til kundesitater) */}
+          <div style={{marginBottom:16}}>
+            {["Energimerke A–G med forklaring","Alle lønnsomme tiltak rangert etter tilbakebetaling","Enova-støtte beregnet per tiltak","Estimert besparelse i kroner per år","Komplett rapport som PDF på e-post"].map(t=>(
+              <div key={t} style={{display:"flex",alignItems:"flex-start",gap:9,marginBottom:7}}>
+                <span style={{color:C.green,fontWeight:900,flexShrink:0,marginTop:1}}>✓</span>
+                <span style={{fontSize:"0.84rem",color:C.navyDark,lineHeight:1.4}}>{t}</span>
+              </div>
+            ))}
           </div>
           <div style={{marginBottom:14}}>
             <label style={S.lbl}>E-postadresse <span style={{color:C.muted,fontWeight:400}}>(rapport sendes automatisk)</span></label>
