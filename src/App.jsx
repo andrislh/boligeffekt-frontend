@@ -547,6 +547,8 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
   const [leadTlf, setLeadTlf]       = useState("");
   const [leadSendt, setLeadSendt]   = useState(false);
   const [leadLaster, setLeadLaster] = useState(false);
+  const [leadTid, setLeadTid]       = useState("");
+  const [leadSamtykke, setLeadSamtykke] = useState(false);
   const [freeEpost, setFreeEpost]   = useState("");
   const epost = epostProp || freeEpost;
 
@@ -819,15 +821,15 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
                 <div style={{textAlign:"center",padding:"16px 0"}}>
                   <div style={{fontSize:"2rem",marginBottom:8}}>🙌</div>
                   <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:6}}>Takk!</div>
-                  <div style={{fontSize:"0.85rem",color:C.muted,lineHeight:1.6}}>Vi kontakter deg innen 1–2 virkedager med tilbud fra kvalifiserte håndverkere i ditt område.</div>
+                  <div style={{fontSize:"0.85rem",color:C.muted,lineHeight:1.6}}>Vi formidler forespørselen til kvalifiserte leverandører for tiltakene dine. Inntil tre kan ta kontakt innen 1–2 virkedager.</div>
                 </div>
               ) : (
                 <>
                   <div style={{display:"flex",alignItems:"flex-start",gap:14,marginBottom:16}}>
                     <div style={{fontSize:"1.8rem",flexShrink:0}}>🔨</div>
                     <div>
-                      <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:4}}>Trenger du hjelp med gjennomføringen?</div>
-                      <div style={{fontSize:"0.82rem",color:C.muted,lineHeight:1.55}}>Vi kan hjelpe deg med å finne kvalifiserte håndverkere for tiltakene du har valgt.</div>
+                      <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:4}}>Få uforpliktende tilbud på tiltakene</div>
+                      <div style={{fontSize:"0.82rem",color:C.muted,lineHeight:1.55}}>Vi kobler deg med kvalifiserte leverandører for tiltakene du har valgt – gratis og uforpliktende.</div>
                     </div>
                   </div>
                   <div style={{display:"grid",gap:10,marginBottom:12}}>
@@ -839,17 +841,33 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
                       <label style={S.lbl}>Telefonnummer</label>
                       <input style={S.inp} type="tel" placeholder="400 00 000" value={leadTlf} onChange={e=>setLeadTlf(e.target.value)}/>
                     </div>
+                    <div>
+                      <label style={S.lbl}>Når planlegger du å gjennomføre?</label>
+                      <select style={S.sel} value={leadTid} onChange={e=>setLeadTid(e.target.value)}>
+                        <option value="">Velg …</option>
+                        <option value="snarest">Snarest mulig</option>
+                        <option value="0-3">Innen 3 måneder</option>
+                        <option value="3-12">Om 3–12 måneder</option>
+                        <option value="orientering">Bare orientering foreløpig</option>
+                      </select>
+                    </div>
                   </div>
+                  <label style={{display:"flex",alignItems:"flex-start",gap:9,marginBottom:12,cursor:"pointer"}}>
+                    <input type="checkbox" checked={leadSamtykke} onChange={e=>setLeadSamtykke(e.target.checked)} style={{marginTop:3,flexShrink:0,width:16,height:16}} aria-label="Samtykke til deling med leverandører"/>
+                    <span style={{fontSize:"0.76rem",color:C.muted,lineHeight:1.5}}>Jeg samtykker til at BoligEffekt deler navn og telefonnummer med inntil tre kvalifiserte leverandører for de valgte tiltakene, slik at de kan kontakte meg med tilbud.</span>
+                  </label>
                   <button
-                    style={{...S.btnP,background:`linear-gradient(135deg,${C.green},${C.greenLight})`,boxShadow:`0 6px 20px ${C.green}44`,opacity:leadLaster?0.7:1}}
-                    disabled={leadLaster}
+                    style={{...S.btnP,background:`linear-gradient(135deg,${C.green},${C.greenLight})`,boxShadow:`0 6px 20px ${C.green}44`,opacity:(leadLaster||!leadSamtykke)?0.6:1}}
+                    disabled={leadLaster || !leadSamtykke}
                     onClick={async () => {
-                      if (!leadNavn.trim() || !leadTlf.trim()) return;
+                      if (!leadNavn.trim() || !leadTlf.trim() || !leadSamtykke) return;
                       setLeadLaster(true);
+                      track("lead_requested", { grade: resultat.merke.merke });
+                      const region = (input?.adresse || "").trim() || (KLIMASONER.find(k=>k.id===input?.klimasone)?.label) || "";
                       try {
                         await fetch(`${BACKEND}/api/lead`, {
                           method:"POST", headers:{"Content-Type":"application/json"},
-                          body: JSON.stringify({ navn:leadNavn, telefon:leadTlf, epost, merke:resultat.merke.merke, tiltak:valgTiltak.map(t=>t.navn) }),
+                          body: JSON.stringify({ navn:leadNavn, telefon:leadTlf, epost, merke:resultat.merke.merke, tiltak:valgTiltak.map(t=>t.navn), region, tidsramme:leadTid, samtykke:leadSamtykke }),
                         });
                       } catch(_) {}
                       setLeadSendt(true); setLeadLaster(false);
@@ -857,6 +875,7 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
                   >
                     {leadLaster ? "Sender…" : "Ja, kontakt meg →"}
                   </button>
+                  <div style={{fontSize:"0.68rem",color:C.muted,marginTop:8,textAlign:"center"}}>Gratis og uforpliktende. Du kan trekke samtykket når som helst.</div>
                 </>
               )}
             </div>
