@@ -376,6 +376,9 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
   const [laster, setLaster]     = useState(false);
   const [feil, setFeil]         = useState("");
   const [delKopiert, setDelKopiert] = useState(false);
+  const [fangetSendt, setFangetSendt]   = useState(false);
+  const [fangetLaster, setFangetLaster] = useState(false);
+  const [fangetFeil, setFangetFeil]     = useState("");
   const { merke, kwhPerM2, tiltak } = resultat;
   const høy = tiltak.filter(t => t.prioritet === "høy");
 
@@ -403,6 +406,24 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
       setFeil("Kunne ikke kontakte betalingstjenesten. Sjekk nettforbindelsen og prøv igjen.");
       setLaster(false);
     }
+  }
+
+  // E-postfangst: fanger leads som ikke kjøper med en gang, og sender dem et
+  // gratis sammendrag av energimerket. Verdifullt fordi ~95 % ikke kjøper umiddelbart.
+  async function fangEpost() {
+    if (!epost.includes("@")) { setFangetFeil("Skriv inn en gyldig e-postadresse"); return; }
+    setFangetFeil(""); setFangetLaster(true);
+    track("lead_captured", { grade: merke.merke });
+    try {
+      await fetch(`${BACKEND}/api/capture-lead`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ epost, merke: merke.merke, kwhPerM2, tiltak: høy.slice(0, 3).map(t => t.navn), kilde: "betalingsmur" }),
+      });
+      setFangetSendt(true);
+    } catch(_) {
+      setFangetFeil("Kunne ikke sende akkurat nå – prøv igjen.");
+    }
+    setFangetLaster(false);
   }
 
   return (
@@ -482,6 +503,31 @@ function Betalingsmur({ resultat, input, onBetalt, onNullstill }) {
           </button>
         </div>
         <p style={{textAlign:"center",fontSize:"0.7rem",color:"#bbb",lineHeight:1.6}}>Betaling håndteres av Stripe. BoligEffekt lagrer ikke kortinformasjon.</p>
+
+        {/* E-postfangst – lavterskel for de som ikke kjøper med en gang */}
+        <div className="be-in-4" style={{...S.card,border:`1.5px dashed ${C.green}55`,background:`${C.green}0A`,marginTop:4}}>
+          {fangetSendt ? (
+            <div style={{textAlign:"center",padding:"6px 0"}}>
+              <div style={{width:34,height:34,borderRadius:"50%",background:C.green,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,margin:"0 auto 8px"}}>✓</div>
+              <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,color:C.navyDark}}>Sjekk innboksen din</div>
+              <div style={{fontSize:"0.8rem",color:C.muted,marginTop:4}}>Vi har sendt energimerket ditt på e-post.</div>
+            </div>
+          ) : (
+            <>
+              <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1rem",color:C.navyDark,marginBottom:4}}>Ikke klar til å kjøpe?</div>
+              <div style={{fontSize:"0.82rem",color:C.muted,marginBottom:12,lineHeight:1.55}}>Få energimerket og de viktigste tiltakene på e-post – helt gratis.</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <input className="be-input" style={{...S.inp,flex:1,minWidth:160}} type="email" placeholder="navn@epost.no" value={epost}
+                  onChange={e=>setEpost(e.target.value)} onKeyDown={e=>e.key==="Enter"&&fangEpost()} aria-label="E-postadresse for gratis sammendrag"/>
+                <button className="be-btn-g" style={{...S.btnG,background:C.white,whiteSpace:"nowrap"}} onClick={fangEpost} disabled={fangetLaster}>
+                  {fangetLaster ? "Sender…" : "Send meg sammendraget"}
+                </button>
+              </div>
+              {fangetFeil && <div style={{color:"#DC2626",fontSize:"0.8rem",marginTop:6,display:"flex",alignItems:"center",gap:4}}><span>⚠</span>{fangetFeil}</div>}
+              <div style={{fontSize:"0.68rem",color:C.muted,marginTop:8}}>Ingen spam. Avmelding når som helst.</div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
