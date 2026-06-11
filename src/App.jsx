@@ -821,7 +821,7 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
                 <div style={{textAlign:"center",padding:"16px 0"}}>
                   <div style={{fontSize:"2rem",marginBottom:8}}>🙌</div>
                   <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:6}}>Takk!</div>
-                  <div style={{fontSize:"0.85rem",color:C.muted,lineHeight:1.6}}>Vi formidler forespørselen til kvalifiserte leverandører for tiltakene dine. Inntil tre kan ta kontakt innen 1–2 virkedager.</div>
+                  <div style={{fontSize:"0.85rem",color:C.muted,lineHeight:1.6}}>Vi har notert interessen din og tar kontakt så snart vi har en passende leverandør for tiltakene dine i ditt område.</div>
                 </div>
               ) : (
                 <>
@@ -829,7 +829,7 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
                     <div style={{fontSize:"1.8rem",flexShrink:0}}>🔨</div>
                     <div>
                       <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:C.navyDark,marginBottom:4}}>Få uforpliktende tilbud på tiltakene</div>
-                      <div style={{fontSize:"0.82rem",color:C.muted,lineHeight:1.55}}>Vi kobler deg med kvalifiserte leverandører for tiltakene du har valgt – gratis og uforpliktende.</div>
+                      <div style={{fontSize:"0.82rem",color:C.muted,lineHeight:1.55}}>Meld interesse, så kobler vi deg med en kvalifisert leverandør for de valgte tiltakene når vi har en passende i ditt område – gratis og uforpliktende.</div>
                     </div>
                   </div>
                   <div style={{display:"grid",gap:10,marginBottom:12}}>
@@ -854,7 +854,7 @@ function OppgraderingsFlow({ resultat, epost: epostProp, input, sessionId, onNul
                   </div>
                   <label style={{display:"flex",alignItems:"flex-start",gap:9,marginBottom:12,cursor:"pointer"}}>
                     <input type="checkbox" checked={leadSamtykke} onChange={e=>setLeadSamtykke(e.target.checked)} style={{marginTop:3,flexShrink:0,width:16,height:16}} aria-label="Samtykke til deling med leverandører"/>
-                    <span style={{fontSize:"0.76rem",color:C.muted,lineHeight:1.5}}>Jeg samtykker til at BoligEffekt deler navn og telefonnummer med inntil tre kvalifiserte leverandører for de valgte tiltakene, slik at de kan kontakte meg med tilbud.</span>
+                    <span style={{fontSize:"0.76rem",color:C.muted,lineHeight:1.5}}>Jeg samtykker til at BoligEffekt deler navn og telefonnummer med en kvalifisert leverandør for de valgte tiltakene, slik at de kan kontakte meg med tilbud.</span>
                   </label>
                   <button
                     style={{...S.btnP,background:`linear-gradient(135deg,${C.green},${C.greenLight})`,boxShadow:`0 6px 20px ${C.green}44`,opacity:(leadLaster||!leadSamtykke)?0.6:1}}
